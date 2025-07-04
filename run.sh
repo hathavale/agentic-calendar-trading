@@ -3,6 +3,7 @@
 # Agentic Calendar Spread Trading System - Run Script
 
 # Check if virtual environment exists
+# Note: venv/ directory is excluded from Git via .gitignore
 if [ ! -d "venv" ]; then
     echo "Creating virtual environment..."
     python3 -m venv venv
