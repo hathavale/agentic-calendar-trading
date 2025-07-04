@@ -24,5 +24,5 @@ export FLASK_DEBUG=True
 
 # Run the application
 echo "Starting Flask application..."
-echo "Application will be available at: http://localhost:5000"
+echo "Application will be available at: http://localhost:5001"
 python app.py

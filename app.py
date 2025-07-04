@@ -48,6 +48,112 @@ APPLICATION_DATA = {
             }
         }
     ],
+    "all_stocks": [
+        {
+            "symbol": "XLF",
+            "current_price": 64.83,
+            "atr_percentage": 0.017,
+            "implied_volatility": 22.0,
+            "iv_percentile": 30.0,
+            "open_interest": 12000,
+            "price_stability_30d": 0.063,
+            "has_dividend": False,
+            "has_earnings_soon": False,
+            "qualified": True,
+            "criteria_met_count": 8
+        },
+        {
+            "symbol": "SPY",
+            "current_price": 79.14,
+            "atr_percentage": 0.014,
+            "implied_volatility": 18.0,
+            "iv_percentile": 25.0,
+            "open_interest": 25000,
+            "price_stability_30d": 0.071,
+            "has_dividend": False,
+            "has_earnings_soon": False,
+            "qualified": False,
+            "criteria_met_count": 7
+        },
+        {
+            "symbol": "QQQ",
+            "current_price": 69.02,
+            "atr_percentage": 0.017,
+            "implied_volatility": 25.0,
+            "iv_percentile": 35.0,
+            "open_interest": 15000,
+            "price_stability_30d": 0.149,
+            "has_dividend": False,
+            "has_earnings_soon": False,
+            "qualified": False,
+            "criteria_met_count": 7
+        },
+        {
+            "symbol": "IWM",
+            "current_price": 97.92,
+            "atr_percentage": 0.018,
+            "implied_volatility": 28.0,
+            "iv_percentile": 40.0,
+            "open_interest": 8000,
+            "price_stability_30d": 0.117,
+            "has_dividend": False,
+            "has_earnings_soon": False,
+            "qualified": False,
+            "criteria_met_count": 7
+        },
+        {
+            "symbol": "TLT",
+            "current_price": 116.98,
+            "atr_percentage": 0.017,
+            "implied_volatility": 31.0,
+            "iv_percentile": 45.0,
+            "open_interest": 18000,
+            "price_stability_30d": 0.124,
+            "has_dividend": False,
+            "has_earnings_soon": False,
+            "qualified": False,
+            "criteria_met_count": 7
+        },
+        {
+            "symbol": "AAPL",
+            "current_price": 209.11,
+            "atr_percentage": 0.030,
+            "implied_volatility": 45.0,
+            "iv_percentile": 70.0,
+            "open_interest": 5000,
+            "price_stability_30d": 0.190,
+            "has_dividend": True,
+            "has_earnings_soon": False,
+            "qualified": False,
+            "criteria_met_count": 3
+        },
+        {
+            "symbol": "TSLA",
+            "current_price": 39.89,
+            "atr_percentage": 0.025,
+            "implied_volatility": 55.0,
+            "iv_percentile": 85.0,
+            "open_interest": 3000,
+            "price_stability_30d": 0.240,
+            "has_dividend": False,
+            "has_earnings_soon": True,
+            "qualified": False,
+            "criteria_met_count": 3
+        },
+        {
+            "symbol": "AMZN",
+            "current_price": 128.49,
+            "atr_percentage": 0.028,
+            "implied_volatility": 38.0,
+            "iv_percentile": 60.0,
+            "open_interest": 7000,
+            "price_stability_30d": 0.234,
+            "has_dividend": False,
+            "has_earnings_soon": True,
+            "qualified": False,
+            "criteria_met_count": 5
+        }
+    ],
     "calendar_spreads": [
         {
             "symbol": "XLF",
@@ -58,6 +164,34 @@ APPLICATION_DATA = {
             "max_profit_zone_high": 65.28,
             "breakeven_low": 62.59,
             "breakeven_high": 65.41,
+            "risk_reward_ratio": 2.50,
+            "front_month_days": 30,
+            "back_month_days": 60,
+            "implied_volatility": 22.0
+        },
+        {
+            "symbol": "XLF",
+            "current_price": 64.83,
+            "strike_price": 65,
+            "strategy_type": "Call Calendar",
+            "max_profit_zone_low": 63.70,
+            "max_profit_zone_high": 66.30,
+            "breakeven_low": 63.57,
+            "breakeven_high": 66.43,
+            "risk_reward_ratio": 2.50,
+            "front_month_days": 30,
+            "back_month_days": 60,
+            "implied_volatility": 22.0
+        },
+        {
+            "symbol": "XLF",
+            "current_price": 64.83,
+            "strike_price": 66,
+            "strategy_type": "Call Calendar",
+            "max_profit_zone_low": 64.68,
+            "max_profit_zone_high": 67.32,
+            "breakeven_low": 64.55,
+            "breakeven_high": 67.45,
             "risk_reward_ratio": 2.50,
             "front_month_days": 30,
             "back_month_days": 60,
@@ -89,36 +223,8 @@ def get_stocks():
     """API endpoint to get stock data"""
     filter_type = request.args.get('filter', 'all')
     
-    # Load stock data from CSV or database here
-    # For now, returning sample data
-    stocks = [
-        {
-            "symbol": "XLF",
-            "current_price": 64.83,
-            "atr_percentage": 0.017,
-            "implied_volatility": 22.0,
-            "iv_percentile": 30.0,
-            "open_interest": 12000,
-            "price_stability_30d": 0.063,
-            "has_dividend": False,
-            "has_earnings_soon": False,
-            "qualified": True,
-            "criteria_met_count": 8
-        },
-        {
-            "symbol": "SPY",
-            "current_price": 79.14,
-            "atr_percentage": 0.014,
-            "implied_volatility": 18.0,
-            "iv_percentile": 25.0,
-            "open_interest": 25000,
-            "price_stability_30d": 0.071,
-            "has_dividend": False,
-            "has_earnings_soon": False,
-            "qualified": False,
-            "criteria_met_count": 7
-        }
-    ]
+    # Use the all_stocks data from APPLICATION_DATA
+    stocks = APPLICATION_DATA['all_stocks']
     
     if filter_type == 'qualified':
         stocks = [s for s in stocks if s['qualified']]
@@ -158,6 +264,11 @@ def refresh_scan():
         "stats": APPLICATION_DATA['system_stats']
     })
 
+@app.route('/favicon.ico')
+def favicon():
+    """Serve favicon"""
+    return '', 204  # Return empty response with "No Content" status
+
 @app.route('/api/export/stocks')
 def export_stocks():
     """API endpoint to export stock data as CSV"""
@@ -173,4 +284,4 @@ def internal_error(error):
     return render_template('500.html'), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5001)
