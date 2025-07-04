@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic Calendar Spread Trading System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="trading-app">
+        <!-- Header -->
+        <header class="header">
+            <div class="container">
+                <div class="header-content">
+                    <h1>Agentic Calendar Spread Trading System</h1>
+                    <div class="header-actions">
+                        <button class="btn btn--sm btn--outline" id="theme-toggle">
+                            <span id="theme-icon">🌙</span>
+                        </button>
+                        <div class="status-indicator">
+                            <span class="status-dot active"></span>
+                            <span class="status-text">Active</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Navigation Tabs -->
+                <nav class="nav-tabs">
+                    <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
+                    <button class="nav-tab" data-tab="screening">Stock Screening</button>
+                    <button class="nav-tab" data-tab="calendar">Calendar Spreads</button>
+                    <button class="nav-tab" data-tab="workflow">System Architecture</button>
+                    <button class="nav-tab" data-tab="settings">Settings</button>
+                </nav>
+
+                <!-- Tab Content -->
+                <div class="tab-content">
+                    <!-- Dashboard Tab -->
+                    <div class="tab-pane active" id="dashboard">
+                        <div class="dashboard-stats">
+                            <div class="stat-card">
+                                <h3>Total Stocks Analyzed</h3>
+                                <div class="stat-value">8</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>Qualified Stocks</h3>
+                                <div class="stat-value success">1</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>Success Rate</h3>
+                                <div class="stat-value">12.5%</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>Avg Criteria Met</h3>
+                                <div class="stat-value">6.25/8</div>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-content">
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Real-Time Screening Status</h3>
+                                </div>
+                                <div class="card__body">
+                                    <div class="screening-status">
+                                        <div class="status-item">
+                                            <span class="status status--success">Last Scan</span>
+                                            <span>July 4, 2025 11:47 AM</span>
+                                        </div>
+                                        <div class="status-item">
+                                            <span class="status status--info">Next Scan</span>
+                                            <span>July 4, 2025 12:17 PM</span>
+                                        </div>
+                                        <div class="status-item">
+                                            <span class="status status--warning">Scan Interval</span>
+                                            <span>30 minutes</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Top Qualified Stock</h3>
+                                </div>
+                                <div class="card__body">
+                                    <div class="stock-highlight">
+                                        <div class="stock-symbol">XLF</div>
+                                        <div class="stock-price">$64.83</div>
+                                        <div class="stock-score">Score: 56.7</div>
+                                        <div class="stock-metrics">
+                                            <span class="metric">IV: 22.0%</span>
+                                            <span class="metric">ATR: 1.7%</span>
+                                            <span class="metric">OI: 12,000</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stock Screening Tab -->
+                    <div class="tab-pane" id="screening">
+                        <div class="screening-controls">
+                            <div class="controls-header">
+                                <h3>Screening Criteria</h3>
+                                <button class="btn btn--sm btn--primary" id="refresh-scan">Refresh Scan</button>
+                            </div>
+                            <div class="criteria-table">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Criterion</th>
+                                            <th>Target</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>ATR (Price Stability)</td>
+                                            <td>&lt; 5%</td>
+                                            <td><span class="status status--success">Active</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Implied Volatility</td>
+                                            <td>20% - 40%</td>
+                                            <td><span class="status status--success">Active</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Stock Price</td>
+                                            <td>$50 - $150</td>
+                                            <td><span class="status status--success">Active</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>IV Percentile</td>
+                                            <td>&lt; 50%</td>
+                                            <td><span class="status status--success">Active</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Open Interest</td>
+                                            <td>&gt; 1,000</td>
+                                            <td><span class="status status--success">Active</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>30-Day Price Stability</td>
+                                            <td>&lt; 10%</td>
+                                            <td><span class="status status--success">Active</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>No Dividends Expected</td>
+                                            <td>True</td>
+                                            <td><span class="status status--success">Active</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>No Imminent Earnings</td>
+                                            <td>True</td>
+                                            <td><span class="status status--success">Active</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="stocks-table-container">
+                            <div class="table-header">
+                                <h3>All Analyzed Stocks</h3>
+                                <div class="table-controls">
+                                    <select class="form-control" id="stock-filter">
+                                        <option value="all">All Stocks</option>
+                                        <option value="qualified">Qualified Only</option>
+                                        <option value="unqualified">Unqualified Only</option>
+                                    </select>
+                                    <button class="btn btn--sm btn--secondary" id="export-stocks">Export CSV</button>
+                                </div>
+                            </div>
+                            <div class="stocks-table">
+                                <table id="stocks-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Symbol</th>
+                                            <th>Price</th>
+                                            <th>ATR%</th>
+                                            <th>IV%</th>
+                                            <th>IV Percentile</th>
+                                            <th>Open Interest</th>
+                                            <th>30d Stability</th>
+                                            <th>Criteria Met</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="stocks-table-body">
+                                        <!-- Populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Calendar Spreads Tab -->
+                    <div class="tab-pane" id="calendar">
+                        <div class="calendar-header">
+                            <h3>Calendar Spread Analysis</h3>
+                            <p>Analysis for qualified stocks showing optimal calendar spread opportunities</p>
+                        </div>
+
+                        <div class="calendar-content">
+                            <div class="spread-overview">
+                                <div class="card">
+                                    <div class="card__header">
+                                        <h4>XLF Calendar Spreads</h4>
+                                        <span class="stock-price">Current: $64.83</span>
+                                    </div>
+                                    <div class="card__body">
+                                        <div class="spread-strategies" id="spread-strategies">
+                                            <!-- Populated by JavaScript -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="profit-loss-chart">
+                                <div class="card">
+                                    <div class="card__header">
+                                        <h4>Profit/Loss Analysis</h4>
+                                    </div>
+                                    <div class="card__body">
+                                        <div class="chart-container">
+                                            <canvas id="profitLossChart" height="300"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="strategy-guide">
+                                <div class="card">
+                                    <div class="card__header">
+                                        <h4>Calendar Spread Guide</h4>
+                                    </div>
+                                    <div class="card__body">
+                                        <img src="https://pplx-res.cloudinary.com/image/upload/v1749007873/pplx_project_search_images/426732d3d96f699e6cf3c2149af383b493f67fb1.jpg" alt="Calendar Spread Profit Loss Diagram" class="strategy-image">
+                                        <div class="strategy-explanation">
+                                            <h5>Key Points:</h5>
+                                            <ul>
+                                                <li>Maximum profit occurs when stock price equals strike price at front month expiration</li>
+                                                <li>Limited risk with defined profit zones</li>
+                                                <li>Benefits from time decay and volatility expansion</li>
+                                                <li>Best suited for stocks with stable price movement</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Architecture Tab -->
+                    <div class="tab-pane" id="workflow">
+                        <div class="workflow-header">
+                            <h3>Agentic Trading System Architecture</h3>
+                            <p>Automated workflow for calendar spread identification and execution</p>
+                        </div>
+
+                        <div class="workflow-content">
+                            <div class="workflow-diagram">
+                                <img src="https://ppl-ai-code-interpreter-files.s3.amazonaws.com/web/direct-files/e9b6116cfa4e18f38a66d8deccfbcf49/8163f2ca-3066-4aa4-8019-342bd99944a5/5ecb50e5.png" alt="Agentic Calendar Spread Workflow" class="workflow-image">
+                            </div>
+
+                            <div class="workflow-steps">
+                                <div class="step-card">
+                                    <div class="step-number">1</div>
+                                    <div class="step-content">
+                                        <h4>Data Collection</h4>
+                                        <p>Real-time market data, option chains, and volatility metrics</p>
+                                    </div>
+                                </div>
+                                <div class="step-card">
+                                    <div class="step-number">2</div>
+                                    <div class="step-content">
+                                        <h4>Stock Screening</h4>
+                                        <p>Apply 8 criteria filters to identify suitable candidates</p>
+                                    </div>
+                                </div>
+                                <div class="step-card">
+                                    <div class="step-number">3</div>
+                                    <div class="step-content">
+                                        <h4>Calendar Analysis</h4>
+                                        <p>Generate optimal calendar spread strategies</p>
+                                    </div>
+                                </div>
+                                <div class="step-card">
+                                    <div class="step-number">4</div>
+                                    <div class="step-content">
+                                        <h4>Risk Assessment</h4>
+                                        <p>Calculate risk/reward ratios and profit zones</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Settings Tab -->
+                    <div class="tab-pane" id="settings">
+                        <div class="settings-header">
+                            <h3>Screening Parameters</h3>
+                            <p>Adjust the criteria for stock screening and calendar spread analysis</p>
+                        </div>
+
+                        <div class="settings-content">
+                            <div class="settings-grid">
+                                <div class="setting-group">
+                                    <label class="form-label">ATR Threshold (%)</label>
+                                    <input type="number" class="form-control" id="atr-threshold" value="5" min="1" max="20" step="0.1">
+                                </div>
+                                <div class="setting-group">
+                                    <label class="form-label">Min Implied Volatility (%)</label>
+                                    <input type="number" class="form-control" id="iv-min" value="20" min="10" max="50" step="1">
+                                </div>
+                                <div class="setting-group">
+                                    <label class="form-label">Max Implied Volatility (%)</label>
+                                    <input type="number" class="form-control" id="iv-max" value="40" min="30" max="100" step="1">
+                                </div>
+                                <div class="setting-group">
+                                    <label class="form-label">Min Stock Price ($)</label>
+                                    <input type="number" class="form-control" id="price-min" value="50" min="10" max="500" step="1">
+                                </div>
+                                <div class="setting-group">
+                                    <label class="form-label">Max Stock Price ($)</label>
+                                    <input type="number" class="form-control" id="price-max" value="150" min="50" max="1000" step="1">
+                                </div>
+                                <div class="setting-group">
+                                    <label class="form-label">IV Percentile Max (%)</label>
+                                    <input type="number" class="form-control" id="iv-percentile-max" value="50" min="10" max="100" step="1">
+                                </div>
+                                <div class="setting-group">
+                                    <label class="form-label">Min Open Interest</label>
+                                    <input type="number" class="form-control" id="open-interest-min" value="1000" min="100" max="50000" step="100">
+                                </div>
+                                <div class="setting-group">
+                                    <label class="form-label">30-Day Price Stability (%)</label>
+                                    <input type="number" class="form-control" id="price-stability-max" value="10" min="5" max="30" step="0.1">
+                                </div>
+                            </div>
+
+                            <div class="settings-actions">
+                                <button class="btn btn--primary" id="apply-settings">Apply Settings</button>
+                                <button class="btn btn--secondary" id="reset-settings">Reset to Default</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container">
+                <p>&copy; 2025 Agentic Calendar Spread Trading System. All rights reserved.</p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

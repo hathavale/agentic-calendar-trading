@@ -1,0 +1,4 @@
+Symbol,Current_Price,Strike_Price,Strategy_Type,Max_Profit_Zone_Low,Max_Profit_Zone_High,Breakeven_Low,Breakeven_High,Risk_Reward_Ratio,Front_Month_Days,Back_Month_Days,Implied_Volatility
+XLF,64.82576763968399,64,Put Calendar,62.72,65.28,62.59,65.41,2.5,30,60,22
+XLF,64.82576763968399,65,Call Calendar,63.7,66.3,63.57,66.43,2.5,30,60,22
+XLF,64.82576763968399,66,Call Calendar,64.68,67.32,64.55,67.45,2.5,30,60,22
