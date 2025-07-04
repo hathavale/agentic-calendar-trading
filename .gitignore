@@ -106,9 +106,18 @@ celerybeat.pid
 .venv
 env/
 venv/
+*venv/
+*_venv/
 ENV/
 env.bak/
 venv.bak/
+*venv.bak/
+
+# Common virtual environment names
+virtualenv/
+.virtualenv/
+pyenv/
+.pyenv/
 
 # Spyder project settings
 .spyderproject
