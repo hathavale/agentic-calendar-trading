@@ -538,42 +538,115 @@ function refreshScan() {
     
     const originalText = refreshScanBtn.textContent;
     
-    refreshScanBtn.textContent = 'Scanning...';
+    // Show loading state
+    refreshScanBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching Live Data...';
     refreshScanBtn.disabled = true;
     
-    // Call Flask API to trigger scan
+    // Show loading indicator in dashboard
+    showLoadingIndicator();
+    
+    // Call Flask API to trigger scan with live Yahoo Finance data
     fetch('/api/refresh-scan', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
     .then(data => {
-        console.log('Scan completed:', data);
+        console.log('Live scan completed:', data);
+        
+        if (data.status === 'error') {
+            throw new Error(data.message || 'Scan failed');
+        }
+        
+        // Show success message with details
+        refreshScanBtn.innerHTML = '<i class="fas fa-check"></i> Live Data Updated!';
+        showSuccessMessage(data.message || 'Scan completed successfully');
+        
         // Reload application data
         return loadApplicationData();
     })
     .then(() => {
         // Update all UI components with new data
+        hideLoadingIndicator();
         initializeStocksTable();
         updateDashboardStats();
         updateSystemStatus();
         
-        refreshScanBtn.textContent = 'Scan Complete!';
+        // Reset button after delay
         setTimeout(() => {
-            refreshScanBtn.textContent = originalText;
-            refreshScanBtn.disabled = false;
-        }, 1000);
-    })
-    .catch(error => {
-        console.error('Error during scan:', error);
-        refreshScanBtn.textContent = 'Error';
-        setTimeout(() => {
-            refreshScanBtn.textContent = originalText;
+            refreshScanBtn.innerHTML = originalText;
             refreshScanBtn.disabled = false;
         }, 2000);
+    })
+    .catch(error => {
+        console.error('Error during live scan:', error);
+        hideLoadingIndicator();
+        
+        refreshScanBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
+        showErrorMessage(`Scan failed: ${error.message}`);
+        
+        setTimeout(() => {
+            refreshScanBtn.innerHTML = originalText;
+            refreshScanBtn.disabled = false;
+        }, 3000);
     });
+}
+
+// Helper functions for UI feedback
+function showLoadingIndicator() {
+    const dashboardGrid = document.querySelector('.dashboard-grid');
+    if (dashboardGrid) {
+        dashboardGrid.style.opacity = '0.6';
+        dashboardGrid.style.pointerEvents = 'none';
+    }
+}
+
+function hideLoadingIndicator() {
+    const dashboardGrid = document.querySelector('.dashboard-grid');
+    if (dashboardGrid) {
+        dashboardGrid.style.opacity = '1';
+        dashboardGrid.style.pointerEvents = 'auto';
+    }
+}
+
+function showSuccessMessage(message) {
+    showNotification(message, 'success');
+}
+
+function showErrorMessage(message) {
+    showNotification(message, 'error');
+}
+
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <div class="notification-content">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+            <span>${message}</span>
+        </div>
+        <button class="notification-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
 }
 
 // Event Listeners
