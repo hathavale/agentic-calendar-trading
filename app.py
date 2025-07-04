@@ -8,7 +8,7 @@ import json
 import os
 from datetime import datetime, timedelta
 import logging
-from services.yahoo_finance_service import YahooFinanceService
+from services.data_fetcher import DataFetcher
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -20,8 +20,9 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
 app.config['DEBUG'] = True
 
-# Initialize Yahoo Finance service
-yahoo_service = YahooFinanceService()
+# Initialize Data Fetcher with yfinance as default (free, no API key required)
+# Can be switched to other sources like 'eodhd', 'alpha_vantage', etc. with API keys
+data_fetcher = DataFetcher(source="yfinance")
 
 # Application state - will be populated with real data
 APPLICATION_DATA = {
@@ -53,15 +54,15 @@ def load_initial_data():
     """Load initial stock data on app startup"""
     logger.info("Loading initial stock data...")
     try:
-        symbols = yahoo_service.get_default_symbols()
+        symbols = data_fetcher.get_default_symbols()
         criteria = APPLICATION_DATA['screening_criteria']
         
         # Fetch and screen stocks
-        all_stocks = yahoo_service.screen_stocks(symbols, criteria)
+        all_stocks = data_fetcher.screen_stocks(symbols, criteria)
         
         # If no stocks were successfully fetched (due to rate limits), use sample data
         if not all_stocks:
-            logger.warning("No stocks fetched from Yahoo Finance, using sample data...")
+            logger.warning("No stocks fetched from data source, using sample data...")
             all_stocks = get_sample_stock_data()
         elif len(all_stocks) < 3:
             logger.warning("Very few stocks fetched, supplementing with sample data...")
@@ -317,7 +318,7 @@ def screening_criteria():
                 total_criteria_met = 0
                 
                 for stock in APPLICATION_DATA['all_stocks']:
-                    qualified, criteria_met_count = yahoo_service._evaluate_stock(
+                    qualified, criteria_met_count = data_fetcher._evaluate_stock(
                         stock, APPLICATION_DATA['screening_criteria']
                     )
                     stock['qualified'] = qualified
@@ -361,19 +362,19 @@ def screening_criteria():
 
 @app.route('/api/refresh-scan', methods=['POST'])
 def refresh_scan():
-    """API endpoint to trigger a new scan with real Yahoo Finance data"""
+    """API endpoint to trigger a new scan with real data from configured source"""
     try:
         logger.info("Starting refresh scan with live data...")
         
         # Clear cache to get fresh data
-        yahoo_service.clear_cache()
+        data_fetcher.clear_cache()
         
         # Get symbols to scan
-        symbols = yahoo_service.get_default_symbols()
+        symbols = data_fetcher.get_default_symbols()
         criteria = APPLICATION_DATA['screening_criteria']
         
         # Fetch fresh data and screen stocks
-        all_stocks = yahoo_service.screen_stocks(symbols, criteria)
+        all_stocks = data_fetcher.screen_stocks(symbols, criteria)
         
         # If no or very few stocks were fetched (due to rate limits), keep existing data
         if not all_stocks:
@@ -440,6 +441,46 @@ def export_stocks():
     """API endpoint to export stock data as CSV"""
     # In a real application, this would generate and return a CSV file
     return jsonify({"status": "success", "message": "Export functionality would be implemented here"})
+
+@app.route('/api/data-source', methods=['GET', 'POST'])
+def data_source():
+    """API endpoint to get or change data source configuration"""
+    try:
+        if request.method == 'POST':
+            # Change data source
+            data = request.get_json()
+            new_source = data.get('source')
+            api_key = data.get('api_key')
+            
+            if not new_source:
+                return jsonify({
+                    "status": "error", 
+                    "message": "Source is required"
+                }), 400
+            
+            # Change the data source
+            data_fetcher.set_data_source(new_source, api_key)
+            
+            logger.info(f"Data source changed to: {new_source}")
+            
+            return jsonify({
+                "status": "success", 
+                "message": f"Data source changed to {new_source}",
+                "source_info": data_fetcher.get_source_info()
+            })
+        else:
+            # Get current data source info
+            return jsonify({
+                "status": "success",
+                "source_info": data_fetcher.get_source_info()
+            })
+            
+    except Exception as e:
+        logger.error(f"Error managing data source: {str(e)}")
+        return jsonify({
+            "status": "error", 
+            "message": f"Failed to manage data source: {str(e)}"
+        }), 500
 
 @app.errorhandler(404)
 def not_found_error(error):
