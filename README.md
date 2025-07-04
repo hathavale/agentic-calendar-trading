@@ -1,5 +1,9 @@
 # Agentic Calendar Spread Trading System
 
+[![CI/CD Pipeline](https://github.com/yourusername/agentic-calendar-trading/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/agentic-calendar-trading/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+
 A Flask-based web application for automated stock screening and calendar spread trading analysis.
 
 ## Features
@@ -99,6 +103,49 @@ To extend the application:
 2. **Integrate real market data**: Add API clients in a new `services/` directory
 3. **Add database support**: Use Flask-SQLAlchemy for data persistence
 4. **Add authentication**: Implement user management with Flask-Login
+
+## Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+## Roadmap
+
+- [ ] Real-time market data integration
+- [ ] Database support with SQLAlchemy
+- [ ] User authentication and portfolios
+- [ ] Advanced trading strategies
+- [ ] Mobile app development
+- [ ] Backtesting capabilities
+- [ ] Risk management tools
+
+## Support
+
+If you encounter any issues or have questions:
+
+1. Check the [Issues](https://github.com/yourusername/agentic-calendar-trading/issues) page
+2. Create a new issue if your problem isn't already reported
+3. Provide detailed information about your environment and the issue
+
+## Screenshots
+
+### Dashboard
+![Dashboard](static/images/dashboard-screenshot.png)
+
+### Stock Screening
+![Stock Screening](static/images/screening-screenshot.png)
+
+### Calendar Spreads
+![Calendar Spreads](static/images/calendar-screenshot.png)
+
+## Acknowledgments
+
+- Chart.js for interactive charts
+- Flask framework for the web application
+- Bootstrap-inspired CSS framework for UI components
+
+## Disclaimer
+
+This software is for educational and research purposes only. It should not be used as the sole basis for making trading decisions. Trading involves substantial risk of loss and is not suitable for all investors.
 
 ## License
 
