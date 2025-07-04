@@ -254,9 +254,92 @@ def screening_criteria():
 def refresh_scan():
     """API endpoint to trigger a new scan"""
     # In a real application, this would trigger the scanning process
-    APPLICATION_DATA['system_stats']['last_scan_time'] = datetime.utcnow().isoformat() + 'Z'
-    next_scan = datetime.utcnow() + timedelta(minutes=30)
-    APPLICATION_DATA['system_stats']['next_scan_time'] = next_scan.isoformat() + 'Z'
+    # For demo purposes, we'll simulate scanning with current criteria
+    
+    criteria = APPLICATION_DATA['screening_criteria']
+    all_stocks = APPLICATION_DATA['all_stocks']
+    
+    # Simulate re-evaluating stocks with current criteria
+    qualified_count = 0
+    total_criteria_met = 0
+    
+    for stock in all_stocks:
+        # Re-evaluate each stock against current criteria
+        criteria_met = 0
+        qualified = True
+        
+        # Check price range
+        if criteria['price_range'][0] <= stock['current_price'] <= criteria['price_range'][1]:
+            criteria_met += 1
+        else:
+            qualified = False
+            
+        # Check ATR threshold
+        if stock['atr_percentage'] <= criteria['atr_threshold']:
+            criteria_met += 1
+        else:
+            qualified = False
+            
+        # Check IV range
+        if criteria['iv_range'][0] <= stock['implied_volatility'] <= criteria['iv_range'][1]:
+            criteria_met += 1
+        else:
+            qualified = False
+            
+        # Check IV percentile
+        if stock['iv_percentile'] <= criteria['iv_percentile_max']:
+            criteria_met += 1
+        else:
+            qualified = False
+            
+        # Check open interest
+        if stock['open_interest'] >= criteria['open_interest_min']:
+            criteria_met += 1
+        else:
+            qualified = False
+            
+        # Check price stability
+        if stock['price_stability_30d'] <= criteria['price_stability_30d']:
+            criteria_met += 1
+        else:
+            qualified = False
+            
+        # Check dividends and earnings (always true for our demo data)
+        if not stock['has_dividend']:
+            criteria_met += 1
+        else:
+            qualified = False
+            
+        if not stock['has_earnings_soon']:
+            criteria_met += 1
+        else:
+            qualified = False
+        
+        # Update stock data
+        stock['criteria_met_count'] = criteria_met
+        stock['qualified'] = qualified
+        
+        if qualified:
+            qualified_count += 1
+        
+        total_criteria_met += criteria_met
+    
+    # Update system stats
+    total_stocks = len(all_stocks)
+    success_rate = (qualified_count / total_stocks * 100) if total_stocks > 0 else 0
+    average_criteria = total_criteria_met / total_stocks if total_stocks > 0 else 0
+    
+    APPLICATION_DATA['system_stats'].update({
+        'total_stocks_analyzed': total_stocks,
+        'qualified_stocks': qualified_count,
+        'success_rate': round(success_rate, 1),
+        'average_criteria_met': round(average_criteria, 2),
+        'last_scan_time': datetime.utcnow().isoformat() + 'Z',
+        'next_scan_time': (datetime.utcnow() + timedelta(minutes=30)).isoformat() + 'Z'
+    })
+    
+    # Update qualified stocks list
+    APPLICATION_DATA['qualified_stocks'] = [s for s in all_stocks if s['qualified']]
     
     return jsonify({
         "status": "success", 

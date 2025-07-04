@@ -345,7 +345,13 @@ function initializeProfitLossChart() {
 
 // Settings Management
 function initializeSettings() {
+    if (!applicationData.screening_criteria) {
+        console.warn('No screening criteria found in application data');
+        return;
+    }
+    
     const criteria = applicationData.screening_criteria;
+    console.log('Initializing settings with criteria:', criteria);
     
     const elements = {
         'atr-threshold': criteria.atr_threshold * 100,
@@ -362,6 +368,9 @@ function initializeSettings() {
         const element = document.getElementById(id);
         if (element) {
             element.value = value;
+            console.log(`Set ${id} to ${value}`);
+        } else {
+            console.warn(`Element with id '${id}' not found`);
         }
     });
 }
@@ -372,13 +381,60 @@ function applySettings() {
     
     const originalText = applySettingsBtn.textContent;
     
-    applySettingsBtn.textContent = 'Applied!';
-    applySettingsBtn.style.backgroundColor = 'var(--color-success)';
+    // Collect all the settings from form inputs
+    const newCriteria = {
+        atr_threshold: parseFloat(document.getElementById('atr-threshold')?.value || 5) / 100,
+        iv_range: [
+            parseInt(document.getElementById('iv-min')?.value || 20),
+            parseInt(document.getElementById('iv-max')?.value || 40)
+        ],
+        price_range: [
+            parseInt(document.getElementById('price-min')?.value || 50),
+            parseInt(document.getElementById('price-max')?.value || 150)
+        ],
+        iv_percentile_max: parseInt(document.getElementById('iv-percentile-max')?.value || 50),
+        open_interest_min: parseInt(document.getElementById('open-interest-min')?.value || 1000),
+        price_stability_30d: parseFloat(document.getElementById('price-stability-max')?.value || 10) / 100
+    };
     
-    setTimeout(() => {
-        applySettingsBtn.textContent = originalText;
-        applySettingsBtn.style.backgroundColor = '';
-    }, 2000);
+    applySettingsBtn.textContent = 'Applying...';
+    applySettingsBtn.disabled = true;
+    
+    // Send the updated criteria to the backend
+    fetch('/api/screening-criteria', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newCriteria)
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Settings updated:', data);
+        
+        // Update local applicationData
+        Object.assign(applicationData.screening_criteria, newCriteria);
+        
+        applySettingsBtn.textContent = 'Applied!';
+        applySettingsBtn.style.backgroundColor = 'var(--color-success)';
+        
+        setTimeout(() => {
+            applySettingsBtn.textContent = originalText;
+            applySettingsBtn.style.backgroundColor = '';
+            applySettingsBtn.disabled = false;
+        }, 2000);
+    })
+    .catch(error => {
+        console.error('Error updating settings:', error);
+        applySettingsBtn.textContent = 'Error';
+        applySettingsBtn.style.backgroundColor = 'var(--color-error)';
+        
+        setTimeout(() => {
+            applySettingsBtn.textContent = originalText;
+            applySettingsBtn.style.backgroundColor = '';
+            applySettingsBtn.disabled = false;
+        }, 2000);
+    });
 }
 
 function resetSettings() {
@@ -418,6 +474,34 @@ function downloadCSV(content, filename) {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    }
+}
+
+// Dashboard Updates
+function updateDashboardStats() {
+    if (!applicationData.system_stats) return;
+    
+    const stats = applicationData.system_stats;
+    
+    // Update stat cards
+    const statCards = document.querySelectorAll('.stat-card .stat-value');
+    if (statCards.length >= 4) {
+        statCards[0].textContent = stats.total_stocks_analyzed || 0;
+        statCards[1].textContent = stats.qualified_stocks || 0;
+        statCards[2].textContent = `${stats.success_rate || 0}%`;
+        statCards[3].textContent = `${stats.average_criteria_met || 0}/8`;
+    }
+    
+    // Update stock highlight if there are qualified stocks
+    if (applicationData.qualified_stocks && applicationData.qualified_stocks.length > 0) {
+        const stock = applicationData.qualified_stocks[0];
+        const stockSymbol = document.querySelector('.stock-symbol');
+        const stockPrice = document.querySelector('.stock-price');
+        const stockScore = document.querySelector('.stock-score');
+        
+        if (stockSymbol) stockSymbol.textContent = stock.symbol;
+        if (stockPrice) stockPrice.textContent = `$${stock.current_price.toFixed(2)}`;
+        if (stockScore) stockScore.textContent = `Score: ${stock.score.toFixed(1)}`;
     }
 }
 
@@ -468,10 +552,13 @@ function refreshScan() {
     .then(data => {
         console.log('Scan completed:', data);
         // Reload application data
-        loadApplicationData().then(() => {
-            initializeStocksTable();
-            updateSystemStatus();
-        });
+        return loadApplicationData();
+    })
+    .then(() => {
+        // Update all UI components with new data
+        initializeStocksTable();
+        updateDashboardStats();
+        updateSystemStatus();
         
         refreshScanBtn.textContent = 'Scan Complete!';
         setTimeout(() => {
