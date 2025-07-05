@@ -379,125 +379,114 @@ class DataFetcher:
             stock_data = {
                 'symbol': symbol,
                 'data_source': self.source,
-                # Set default values for all required fields
+                # Initialize default values to prevent KeyError
                 'market_cap': 0,
                 'sector': 'Unknown',
                 'industry': 'Unknown',
                 'has_dividend': False,
-                'current_price': 0.0,
-                'volume': 0,
+                'has_earnings_soon': False,
+                'open_interest': 1000,
                 'atr_percentage': 0.0,
                 'price_stability_30d': 0.0,
                 'implied_volatility': 25.0,
-                'iv_percentile': 50.0,
-                'open_interest': 1000,
-                'has_earnings_soon': False
+                'iv_percentile': 50.0
             }
             
             # 1. Get company overview (fundamentals)
             overview_data = self._get_alpha_vantage_overview(symbol)
             if overview_data:
-                # Only update fields that are available
-                if 'MarketCapitalization' in overview_data:
-                    try:
-                        stock_data['market_cap'] = int(float(overview_data['MarketCapitalization']))
-                    except (ValueError, TypeError):
-                        pass
+                # Safe float conversion with None handling
+                dividend_yield = overview_data.get('DividendYield', 0)
+                safe_dividend_yield = 0.0
+                try:
+                    if dividend_yield and dividend_yield != 'None':
+                        safe_dividend_yield = float(dividend_yield)
+                except (ValueError, TypeError):
+                    safe_dividend_yield = 0.0
                 
-                if 'Sector' in overview_data:
-                    stock_data['sector'] = overview_data['Sector']
-                    
-                if 'Industry' in overview_data:
-                    stock_data['industry'] = overview_data['Industry']
-                    
-                if 'DividendYield' in overview_data:
-                    try:
-                        dividend_yield = float(overview_data['DividendYield'])
-                        stock_data['has_dividend'] = dividend_yield > 0
-                    except (ValueError, TypeError):
-                        stock_data['has_dividend'] = False
-            else:
-                logger.warning(f"No overview data available for {symbol}, using defaults")
+                stock_data.update({
+                    'market_cap': overview_data.get('MarketCapitalization', 0),
+                    'sector': overview_data.get('Sector', 'Unknown'),
+                    'industry': overview_data.get('Industry', 'Unknown'),
+                    'has_dividend': safe_dividend_yield > 0
+                })
             
             # 2. Get current quote data
             quote_data = self._get_alpha_vantage_quote(symbol)
             if quote_data:
+                # Safe float conversion with None handling
+                price_str = quote_data.get('05. price', '0')
+                volume_str = quote_data.get('06. volume', '0')
+                
                 try:
-                    current_price = float(quote_data.get('05. price', 0))
-                    volume = int(float(quote_data.get('06. volume', 0)))
-                    stock_data.update({
-                        'current_price': round(current_price, 2),
-                        'volume': volume
-                    })
-                except (ValueError, TypeError) as e:
-                    logger.warning(f"Error parsing quote data for {symbol}: {str(e)}")
-                    # Keep default values but don't return None - continue with other data
+                    current_price = float(price_str) if price_str and price_str != 'None' else 0.0
+                except (ValueError, TypeError):
+                    current_price = 0.0
+                
+                try:
+                    volume = int(float(volume_str)) if volume_str and volume_str != 'None' else 0
+                except (ValueError, TypeError):
+                    volume = 0
+                
+                stock_data.update({
+                    'current_price': round(current_price, 2),
+                    'volume': volume
+                })
             else:
-                logger.warning(f"No quote data from Alpha Vantage for {symbol}, using fallback")
-                # Don't return None immediately - try to get some data and fall back to yfinance if needed
+                logger.warning(f"No quote data from Alpha Vantage for {symbol}")
+                return None
             
             # 3. Get historical data for technical analysis
             historical_data = self._get_alpha_vantage_daily(symbol)
-            hist_df = None
-            
             if historical_data and 'Time Series (Daily)' in historical_data:
                 hist_df = self._convert_alpha_vantage_to_dataframe(historical_data['Time Series (Daily)'])
                 
                 if not hist_df.empty:
-                    try:
-                        # Calculate technical indicators
-                        atr_percentage = self._calculate_atr_percentage(hist_df)
-                        price_stability_30d = self._calculate_price_stability(hist_df, days=30)
-                        
-                        stock_data.update({
-                            'atr_percentage': round(atr_percentage, 4),
-                            'price_stability_30d': round(price_stability_30d, 4)
-                        })
-                    except Exception as e:
-                        logger.warning(f"Error calculating technical indicators for {symbol}: {str(e)}")
-                        # Keep default values
+                    # Calculate technical indicators
+                    atr_percentage = self._calculate_atr_percentage(hist_df)
+                    price_stability_30d = self._calculate_price_stability(hist_df, days=30)
+                    
+                    stock_data.update({
+                        'atr_percentage': round(atr_percentage, 4),
+                        'price_stability_30d': round(price_stability_30d, 4)
+                    })
                 else:
-                    logger.warning(f"Empty historical dataframe for {symbol}")
+                    # Set default values if historical data processing fails
+                    stock_data.update({
+                        'atr_percentage': 0.0,
+                        'price_stability_30d': 0.0
+                    })
             else:
                 logger.warning(f"No historical data from Alpha Vantage for {symbol}")
+                stock_data.update({
+                    'atr_percentage': 0.0,
+                    'price_stability_30d': 0.0
+                })
             
             # 4. Estimate implied volatility (Alpha Vantage doesn't provide options data in free tier)
-            try:
-                implied_volatility, iv_percentile = self._calculate_iv_from_historical(hist_df)
-                stock_data.update({
-                    'implied_volatility': round(implied_volatility, 1),
-                    'iv_percentile': round(iv_percentile, 1)
-                })
-            except Exception as e:
-                logger.warning(f"Error calculating IV for {symbol}: {str(e)}")
-                # Keep default values
+            # We'll calculate based on historical volatility
+            implied_volatility, iv_percentile = self._calculate_iv_from_historical(hist_df if 'hist_df' in locals() else None)
+            stock_data.update({
+                'implied_volatility': round(implied_volatility, 1),
+                'iv_percentile': round(iv_percentile, 1)
+            })
             
             # 5. Estimate other metrics not directly available from Alpha Vantage
-            try:
-                open_interest = self._estimate_open_interest_alpha_vantage(overview_data, stock_data.get('current_price', 0))
-                has_earnings_soon = self._check_upcoming_earnings_alpha_vantage(overview_data)
-                
-                stock_data.update({
-                    'open_interest': open_interest,
-                    'has_earnings_soon': has_earnings_soon
-                })
-            except Exception as e:
-                logger.warning(f"Error estimating additional metrics for {symbol}: {str(e)}")
-                # Keep default values
+            open_interest = self._estimate_open_interest_alpha_vantage(overview_data, stock_data.get('current_price', 0))
+            has_earnings_soon = self._check_upcoming_earnings_alpha_vantage(overview_data)
             
-            # If we have minimal data (at least current price or some basic info), return it
-            # Otherwise, fall back to yfinance
-            if stock_data.get('current_price', 0) > 0 or overview_data:
-                # Cache the result
-                cache_key = f"stock_data_{symbol}_{period}"
-                self.cache[cache_key] = stock_data
-                self.cache_expiry[cache_key] = datetime.now() + self.cache_duration
-                
-                logger.info(f"Successfully fetched Alpha Vantage data for {symbol}")
-                return stock_data
-            else:
-                logger.warning(f"Insufficient Alpha Vantage data for {symbol}, falling back to yfinance")
-                return self._fetch_comprehensive_yfinance_data(symbol, period)
+            stock_data.update({
+                'open_interest': open_interest,
+                'has_earnings_soon': has_earnings_soon
+            })
+            
+            # Cache the result
+            cache_key = f"stock_data_{symbol}_{period}"
+            self.cache[cache_key] = stock_data
+            self.cache_expiry[cache_key] = datetime.now() + self.cache_duration
+            
+            logger.info(f"Successfully fetched comprehensive Alpha Vantage data for {symbol}")
+            return stock_data
             
         except Exception as e:
             logger.error(f"Error in Alpha Vantage comprehensive data fetch for {symbol}: {str(e)}")
@@ -675,14 +664,31 @@ class DataFetcher:
             # Convert to DataFrame format similar to yfinance
             df_data = []
             for date_str, values in time_series_data.items():
-                df_data.append({
-                    'Date': pd.to_datetime(date_str),
-                    'Open': float(values['1. open']),
-                    'High': float(values['2. high']),
-                    'Low': float(values['3. low']),
-                    'Close': float(values['4. close']),
-                    'Volume': int(values['5. volume'])
-                })
+                try:
+                    # Safe float conversion with None handling
+                    open_val = values.get('1. open', '0')
+                    high_val = values.get('2. high', '0')
+                    low_val = values.get('3. low', '0')
+                    close_val = values.get('4. close', '0')
+                    volume_val = values.get('5. volume', '0')
+                    
+                    open_price = float(open_val) if open_val and open_val != 'None' else 0.0
+                    high_price = float(high_val) if high_val and high_val != 'None' else 0.0
+                    low_price = float(low_val) if low_val and low_val != 'None' else 0.0
+                    close_price = float(close_val) if close_val and close_val != 'None' else 0.0
+                    volume = int(float(volume_val)) if volume_val and volume_val != 'None' else 0
+                    
+                    df_data.append({
+                        'Date': pd.to_datetime(date_str),
+                        'Open': open_price,
+                        'High': high_price,
+                        'Low': low_price,
+                        'Close': close_price,
+                        'Volume': volume
+                    })
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Skipping invalid data point for {date_str}: {str(e)}")
+                    continue
             
             df = pd.DataFrame(df_data)
             df.set_index('Date', inplace=True)
@@ -984,7 +990,8 @@ class DataFetcher:
             'open_interest_min': 1000,
             'price_stability_30d': 0.10,
             'exclude_dividends': True,
-            'exclude_earnings': True
+            'exclude_earnings': True,
+            'custom_symbols': []
         }).copy()
 
     def clear_cache(self):
@@ -1088,6 +1095,29 @@ class DataFetcher:
             'cache_hit_ratio': f"{(valid_entries / max(1, len(self.cache)) * 100):.1f}%",
             'cache_duration_minutes': self.cache_duration.total_seconds() / 60
         }
+    
+    def set_custom_symbols(self, symbols: List[str]):
+        """Set custom symbols for screening"""
+        if symbols and isinstance(symbols, list):
+            self.DEFAULT_SYMBOLS = [s.upper().strip() for s in symbols if s.strip()]
+            logger.info(f"Custom symbols set: {self.DEFAULT_SYMBOLS}")
+        else:
+            logger.warning("Invalid symbols provided, keeping default symbols")
+    
+    def get_current_symbols(self) -> List[str]:
+        """Get current symbols being used for screening"""
+        return self.DEFAULT_SYMBOLS.copy()
+    
+    def validate_symbols(self, symbols: List[str]) -> List[str]:
+        """Validate and clean symbol list"""
+        valid_symbols = []
+        for symbol in symbols:
+            symbol = symbol.upper().strip()
+            if symbol and len(symbol) <= 10 and symbol.isalpha():  # Basic validation
+                valid_symbols.append(symbol)
+            else:
+                logger.warning(f"Invalid symbol format: {symbol}")
+        return valid_symbols
 
 
 # Example usage and backward compatibility

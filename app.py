@@ -473,6 +473,64 @@ def data_source():
             "message": f"Failed to manage data source: {str(e)}"
         }), 500
 
+@app.route('/api/symbols', methods=['GET', 'POST'])
+def api_symbols():
+    """Manage custom symbols for screening"""
+    try:
+        if request.method == 'POST':
+            # Set custom symbols
+            data = request.get_json()
+            symbols_input = data.get('symbols', '')
+            
+            if isinstance(symbols_input, str):
+                # Parse comma-separated symbols
+                symbols = [s.strip().upper() for s in symbols_input.split(',') if s.strip()]
+            elif isinstance(symbols_input, list):
+                symbols = [s.strip().upper() for s in symbols_input if s.strip()]
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Invalid symbols format. Expected string or array.'
+                }), 400
+            
+            # Validate symbols
+            valid_symbols = data_fetcher.validate_symbols(symbols)
+            
+            if valid_symbols:
+                # Set custom symbols
+                data_fetcher.set_custom_symbols(valid_symbols)
+                
+                # Update application data
+                APPLICATION_DATA['custom_symbols'] = valid_symbols
+                
+                logger.info(f"Custom symbols updated: {valid_symbols}")
+                
+                return jsonify({
+                    'success': True,
+                    'message': f'Successfully set {len(valid_symbols)} custom symbols',
+                    'symbols': valid_symbols
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'No valid symbols provided'
+                }), 400
+        else:
+            # Get current symbols
+            current_symbols = data_fetcher.get_current_symbols()
+            return jsonify({
+                'success': True,
+                'symbols': current_symbols,
+                'default_symbols': data_fetcher.get_default_symbols()
+            })
+            
+    except Exception as e:
+        logger.error(f"Error managing symbols: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/api/diagnostics', methods=['GET'])
 def api_diagnostics():
     """Run Alpha Vantage API diagnostics"""
