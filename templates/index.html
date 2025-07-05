@@ -250,12 +250,32 @@
                             <p>Analysis for qualified stocks showing optimal calendar spread opportunities</p>
                         </div>
 
-                        <div class="calendar-content">
+                        <div class="calendar-controls">
+                            <div class="card">
+                                <div class="card__header">
+                                    <h4>Select Stock from Current Screening</h4>
+                                </div>
+                                <div class="card__body">
+                                    <div class="stock-selector">
+                                        <select id="calendar-stock-selector" class="form-control">
+                                            <option value="">Select a screened stock...</option>
+                                        </select>
+                                        <div class="selector-info">
+                                            <span id="selected-stock-info" class="stock-info-text">
+                                                Choose from currently screened stocks to view calendar spread opportunities
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="calendar-content" id="calendar-analysis-content" style="display: none;">
                             <div class="spread-overview">
                                 <div class="card">
                                     <div class="card__header">
-                                        <h4>XLF Calendar Spreads</h4>
-                                        <span class="stock-price">Current: $64.83</span>
+                                        <h4 id="calendar-spread-title">Calendar Spreads</h4>
+                                        <span id="calendar-stock-price" class="stock-price">Current: $0.00</span>
                                     </div>
                                     <div class="card__body">
                                         <div class="spread-strategies" id="spread-strategies">

@@ -292,6 +292,85 @@ def get_calendar_spreads():
         logger.error(f"Error fetching calendar spreads: {str(e)}")
         return jsonify({"error": "Failed to fetch calendar spread data"}), 500
 
+@app.route('/api/calendar-spreads/<symbol>')
+def get_calendar_spreads_for_symbol(symbol):
+    """API endpoint to get calendar spread data for a specific symbol"""
+    try:
+        symbol = symbol.upper()
+        
+        # Find the stock data for this symbol
+        stock_data = None
+        for stock in APPLICATION_DATA['all_stocks']:
+            if stock['symbol'] == symbol:
+                stock_data = stock
+                break
+        
+        if not stock_data:
+            return jsonify({"error": f"Stock {symbol} not found"}), 404
+        
+        # Generate calendar spreads for this specific symbol
+        spreads = generate_calendar_spreads_for_symbol(stock_data)
+        
+        return jsonify({
+            "symbol": symbol,
+            "stock_data": stock_data,
+            "calendar_spreads": spreads
+        })
+    
+    except Exception as e:
+        logger.error(f"Error fetching calendar spreads for {symbol}: {str(e)}")
+        return jsonify({"error": f"Failed to fetch calendar spread data for {symbol}"}), 500
+
+def generate_calendar_spreads_for_symbol(stock_data):
+    """Generate calendar spreads for a specific symbol"""
+    spreads = []
+    symbol = stock_data['symbol']
+    price = stock_data['current_price']
+    iv = stock_data['implied_volatility']
+    
+    # Generate strikes around current price
+    strikes = [
+        round(price * 0.95, 2),   # 5% OTM put
+        round(price * 0.98, 2),   # 2% OTM put
+        round(price, 2),          # ATM
+        round(price * 1.02, 2),   # 2% OTM call
+        round(price * 1.05, 2)    # 5% OTM call
+    ]
+    
+    for i, strike in enumerate(strikes):
+        if i <= 1:
+            strategy_type = "Put Calendar"
+        elif i == 2:
+            strategy_type = "ATM Calendar"
+        else:
+            strategy_type = "Call Calendar"
+        
+        # Mock profit zone and breakevens (would use actual options pricing)
+        profit_zone_width = price * 0.04  # 4% width
+        risk_reward = 2.0 + (i * 0.2)  # Vary risk/reward by strike
+        
+        spread = {
+            "symbol": symbol,
+            "current_price": price,
+            "strike_price": strike,
+            "strategy_type": strategy_type,
+            "max_profit_zone_low": round(strike - profit_zone_width/2, 2),
+            "max_profit_zone_high": round(strike + profit_zone_width/2, 2),
+            "breakeven_low": round(strike - profit_zone_width/2 * 1.2, 2),
+            "breakeven_high": round(strike + profit_zone_width/2 * 1.2, 2),
+            "risk_reward_ratio": round(risk_reward, 2),
+            "front_month_days": 30,
+            "back_month_days": 60,
+            "implied_volatility": iv,
+            "distance_from_current": round(abs(strike - price) / price * 100, 1)  # % distance
+        }
+        spreads.append(spread)
+    
+    # Sort by distance from current price (best opportunities first)
+    spreads.sort(key=lambda x: x['distance_from_current'])
+    
+    return spreads
+
 @app.route('/api/screening-criteria', methods=['GET', 'POST'])
 def screening_criteria():
     """API endpoint to get or update screening criteria"""
@@ -518,10 +597,14 @@ def api_symbols():
         else:
             # Get current symbols
             current_symbols = data_fetcher.get_current_symbols()
+            default_symbols = data_fetcher.get_default_symbols()
+            
+            # Return the symbols that are actually being used for screening
             return jsonify({
                 'success': True,
                 'symbols': current_symbols,
-                'default_symbols': data_fetcher.get_default_symbols()
+                'default_symbols': default_symbols,
+                'screening_count': len(APPLICATION_DATA.get('all_stocks', []))
             })
             
     except Exception as e:

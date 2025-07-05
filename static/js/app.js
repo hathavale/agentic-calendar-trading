@@ -36,6 +36,11 @@ async function loadApplicationData() {
         const response = await fetch('/api/data');
         applicationData = await response.json();
         console.log('Application data loaded successfully');
+        
+        // Refresh calendar dropdown when data is loaded
+        if (document.getElementById('calendar-stock-selector')) {
+            refreshCalendarDropdown();
+        }
     } catch (error) {
         console.error('Error loading application data:', error);
         // Fallback to embedded data if API fails
@@ -127,6 +132,29 @@ function populateStocksTable(stocks) {
     
     const filteredStocks = filterStocks(stocks);
     
+    // Update table header to show count and clarify what's being displayed
+    const tableHeaderElement = document.querySelector('.stocks-table-container .table-header h3');
+    if (tableHeaderElement) {
+        const totalCount = stocks ? stocks.length : 0;
+        const displayedCount = filteredStocks.length;
+        const qualifiedCount = stocks ? stocks.filter(s => s.qualified).length : 0;
+        
+        tableHeaderElement.textContent = `Analyzed Stocks from Active Symbols (${displayedCount}/${totalCount} displayed, ${qualifiedCount} qualified)`;
+    }
+    
+    if (filteredStocks.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td colspan="9" class="no-data">
+                ${currentFilter === 'all' ? 
+                    'No stocks available. Make sure symbols are configured in the Symbol Configuration section above.' : 
+                    `No ${currentFilter} stocks found in the current analysis.`}
+            </td>
+        `;
+        stocksTableBody.appendChild(row);
+        return;
+    }
+    
     filteredStocks.forEach(stock => {
         const row = document.createElement('tr');
         row.className = stock.qualified ? 'qualified-row' : 'unqualified-row';
@@ -165,8 +193,21 @@ function populateStocksTable(stocks) {
         row.addEventListener('click', () => {
             if (stock.qualified) {
                 switchTab('calendar');
+                // Auto-select this stock in the calendar dropdown
+                setTimeout(() => {
+                    const selector = document.getElementById('calendar-stock-selector');
+                    if (selector) {
+                        selector.value = stock.symbol;
+                        selector.dispatchEvent(new Event('change'));
+                    }
+                }, 100);
             }
         });
+        
+        if (stock.qualified) {
+            row.style.cursor = 'pointer';
+            row.title = 'Click to view calendar spreads for this stock';
+        }
         
         stocksTableBody.appendChild(row);
     });
@@ -185,9 +226,150 @@ function filterStocks(stocks) {
 
 // Calendar Spreads Management
 function initializeCalendarSpreads() {
-    const spreadStrategies = document.getElementById('spread-strategies');
-    if (spreadStrategies) {
-        populateCalendarSpreads(applicationData.calendar_spreads);
+    populateStockSelector();
+    setupCalendarEventListeners();
+}
+
+function refreshCalendarDropdown() {
+    // Refresh the stock selector when screening data changes
+    populateStockSelector();
+    
+    // Clear any currently selected stock analysis
+    const selector = document.getElementById('calendar-stock-selector');
+    if (selector && selector.value) {
+        // Re-select the same stock if it's still available
+        const currentSelection = selector.value;
+        const stillAvailable = Array.from(selector.options).some(option => option.value === currentSelection);
+        
+        if (!stillAvailable) {
+            // Clear selection if stock is no longer available
+            selector.value = '';
+            hideCalendarAnalysis();
+        }
+    }
+}
+
+function populateStockSelector() {
+    const selector = document.getElementById('calendar-stock-selector');
+    if (!selector) return;
+    
+    // Clear existing options (except the first one)
+    while (selector.options.length > 1) {
+        selector.remove(1);
+    }
+    
+    // Add only stocks from current screening results to the selector
+    if (applicationData.all_stocks) {
+        // Sort stocks: qualified first, then by symbol
+        const sortedStocks = [...applicationData.all_stocks].sort((a, b) => {
+            if (a.qualified !== b.qualified) {
+                return b.qualified - a.qualified; // qualified stocks first
+            }
+            return a.symbol.localeCompare(b.symbol); // then alphabetical
+        });
+        
+        sortedStocks.forEach(stock => {
+            const option = document.createElement('option');
+            option.value = stock.symbol;
+            option.textContent = `${stock.symbol} - $${stock.current_price.toFixed(2)} ${stock.qualified ? '✓ Qualified' : ''}`;
+            selector.appendChild(option);
+        });
+    }
+    
+    // Update the info text to reflect the filtering
+    const infoText = document.getElementById('selected-stock-info');
+    if (infoText && applicationData.all_stocks) {
+        const totalStocks = applicationData.all_stocks.length;
+        const qualifiedStocks = applicationData.all_stocks.filter(s => s.qualified).length;
+        infoText.textContent = `Choose from ${totalStocks} screened stocks (${qualifiedStocks} qualified) to analyze calendar spreads`;
+    }
+}
+
+function setupCalendarEventListeners() {
+    const selector = document.getElementById('calendar-stock-selector');
+    if (!selector) return;
+    
+    selector.addEventListener('change', (e) => {
+        const symbol = e.target.value;
+        if (symbol) {
+            loadCalendarSpreadsForSymbol(symbol);
+        } else {
+            hideCalendarAnalysis();
+        }
+    });
+}
+
+async function loadCalendarSpreadsForSymbol(symbol) {
+    const infoText = document.getElementById('selected-stock-info');
+    const analysisContent = document.getElementById('calendar-analysis-content');
+    
+    // Show loading state
+    if (infoText) {
+        infoText.textContent = `Loading calendar spreads for ${symbol}...`;
+        infoText.className = 'stock-info-text loading';
+    }
+    
+    try {
+        const response = await fetch(`/api/calendar-spreads/${symbol}`);
+        if (!response.ok) {
+            throw new Error(`Failed to load calendar spreads: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Update the display
+        updateCalendarSpreadDisplay(data);
+        
+        // Show analysis content
+        if (analysisContent) {
+            analysisContent.style.display = 'block';
+        }
+        
+        // Update info text
+        if (infoText) {
+            infoText.textContent = `Showing ${data.calendar_spreads.length} calendar spread strategies for ${symbol}`;
+            infoText.className = 'stock-info-text';
+        }
+        
+    } catch (error) {
+        console.error('Error loading calendar spreads:', error);
+        
+        // Show error state
+        if (infoText) {
+            infoText.textContent = `Error loading calendar spreads for ${symbol}: ${error.message}`;
+            infoText.className = 'stock-info-text error';
+        }
+        
+        hideCalendarAnalysis();
+    }
+}
+
+function updateCalendarSpreadDisplay(data) {
+    const { symbol, stock_data, calendar_spreads } = data;
+    
+    // Update title and price
+    const titleElement = document.getElementById('calendar-spread-title');
+    const priceElement = document.getElementById('calendar-stock-price');
+    
+    if (titleElement) {
+        titleElement.textContent = `${symbol} Calendar Spreads`;
+    }
+    
+    if (priceElement) {
+        priceElement.textContent = `Current: $${stock_data.current_price.toFixed(2)}`;
+    }
+    
+    // Update spreads display
+    populateCalendarSpreads(calendar_spreads);
+    
+    // Update profit/loss chart with new data
+    updateProfitLossChart(symbol, stock_data.current_price, calendar_spreads);
+}
+
+function hideCalendarAnalysis() {
+    const analysisContent = document.getElementById('calendar-analysis-content');
+    if (analysisContent) {
+        analysisContent.style.display = 'none';
     }
 }
 
@@ -197,45 +379,135 @@ function populateCalendarSpreads(spreads) {
     
     spreadStrategies.innerHTML = '';
     
-    spreads.forEach(spread => {
-        const strategyCard = document.createElement('div');
-        strategyCard.className = 'strategy-card';
+    if (!spreads || spreads.length === 0) {
+        spreadStrategies.innerHTML = '<p class="no-data">No calendar spreads available for this symbol.</p>';
+        return;
+    }
+    
+    spreads.forEach((spread, index) => {
+        const spreadTable = document.createElement('div');
+        spreadTable.className = 'spread-table-container';
         
-        strategyCard.innerHTML = `
-            <div class="strategy-header">
-                <div class="strategy-type">${spread.strategy_type}</div>
-                <div class="strategy-strike">Strike: $${spread.strike_price}</div>
+        // Add distance indicator for better visual sorting
+        const distanceClass = spread.distance_from_current <= 2 ? 'distance-close' : 
+                            spread.distance_from_current <= 5 ? 'distance-medium' : 'distance-far';
+        
+        spreadTable.innerHTML = `
+            <div class="spread-table-header">
+                <h4 class="spread-strategy-title">${spread.strategy_type}</h4>
+                <div class="spread-badges">
+                    <span class="spread-badge spread-strike">Strike: $${spread.strike_price}</span>
+                    <span class="spread-badge spread-distance ${distanceClass}">${spread.distance_from_current}% away</span>
+                </div>
             </div>
-            <div class="strategy-metrics">
-                <div class="metric-item">
-                    <div class="metric-label">Risk/Reward</div>
-                    <div class="metric-value">${spread.risk_reward_ratio.toFixed(2)}:1</div>
-                </div>
-                <div class="metric-item">
-                    <div class="metric-label">Profit Zone Low</div>
-                    <div class="metric-value">$${spread.max_profit_zone_low.toFixed(2)}</div>
-                </div>
-                <div class="metric-item">
-                    <div class="metric-label">Profit Zone High</div>
-                    <div class="metric-value">$${spread.max_profit_zone_high.toFixed(2)}</div>
-                </div>
-                <div class="metric-item">
-                    <div class="metric-label">Breakeven Low</div>
-                    <div class="metric-value">$${spread.breakeven_low.toFixed(2)}</div>
-                </div>
-                <div class="metric-item">
-                    <div class="metric-label">Breakeven High</div>
-                    <div class="metric-value">$${spread.breakeven_high.toFixed(2)}</div>
-                </div>
-                <div class="metric-item">
-                    <div class="metric-label">Time Frame</div>
-                    <div class="metric-value">${spread.front_month_days}/${spread.back_month_days} days</div>
-                </div>
+            <div class="spread-table-wrapper">
+                <table class="spread-table">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Value</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Risk/Reward Ratio</strong></td>
+                            <td class="metric-value highlight">${spread.risk_reward_ratio.toFixed(2)}:1</td>
+                            <td class="metric-detail">Potential reward per dollar risked</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Profit Zone</strong></td>
+                            <td class="metric-value">$${spread.max_profit_zone_low.toFixed(2)} - $${spread.max_profit_zone_high.toFixed(2)}</td>
+                            <td class="metric-detail">Maximum profit range at expiration</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Breakeven Points</strong></td>
+                            <td class="metric-value">$${spread.breakeven_low.toFixed(2)} - $${spread.breakeven_high.toFixed(2)}</td>
+                            <td class="metric-detail">Price levels where strategy breaks even</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Time Frame</strong></td>
+                            <td class="metric-value">${spread.front_month_days}/${spread.back_month_days} days</td>
+                            <td class="metric-detail">Front month / back month expiration</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Implied Volatility</strong></td>
+                            <td class="metric-value">${spread.implied_volatility.toFixed(1)}%</td>
+                            <td class="metric-detail">Current market volatility expectation</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Current Stock Price</strong></td>
+                            <td class="metric-value">$${spread.current_price.toFixed(2)}</td>
+                            <td class="metric-detail">Live market price</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         `;
         
-        spreadStrategies.appendChild(strategyCard);
+        spreadStrategies.appendChild(spreadTable);
     });
+}
+
+// Update the profit/loss chart with new symbol data
+function updateProfitLossChart(symbol, currentPrice, spreads) {
+    if (!profitLossChart) {
+        // Initialize chart if it doesn't exist
+        initializeProfitLossChart();
+        return;
+    }
+    
+    // Use the first (closest to current price) spread for the chart
+    const mainSpread = spreads && spreads.length > 0 ? spreads[0] : null;
+    
+    if (!mainSpread) {
+        console.warn('No spreads available for chart update');
+        return;
+    }
+    
+    const strikePrice = mainSpread.strike_price;
+    const priceRange = [];
+    const profitLoss = [];
+    
+    // Generate price range around current price (±15%)
+    const minPrice = currentPrice * 0.85;
+    const maxPrice = currentPrice * 1.15;
+    const step = (maxPrice - minPrice) / 50;
+    
+    for (let price = minPrice; price <= maxPrice; price += step) {
+        priceRange.push(price);
+        
+        // Simplified calendar spread P&L calculation
+        let pnl = 0;
+        const distanceFromStrike = Math.abs(price - strikePrice);
+        const relativeDistance = distanceFromStrike / currentPrice;
+        
+        if (relativeDistance <= 0.03) {
+            // Maximum profit zone (±3%)
+            pnl = 100 * (1 - (relativeDistance / 0.03));
+        } else if (relativeDistance <= 0.06) {
+            // Transition to breakeven
+            pnl = 50 * (1 - ((relativeDistance - 0.03) / 0.03));
+        } else {
+            // Loss zone
+            pnl = -75 * ((relativeDistance - 0.06) / 0.04);
+        }
+        
+        profitLoss.push(Math.max(pnl, -200)); // Cap losses at -$200
+    }
+    
+    // Update chart data
+    profitLossChart.data.labels = priceRange.map(p => `$${p.toFixed(1)}`);
+    profitLossChart.data.datasets[0].data = profitLoss;
+    profitLossChart.data.datasets[0].label = `${symbol} ${mainSpread.strategy_type}`;
+    
+    // Update chart title
+    profitLossChart.options.plugins.title = {
+        display: true,
+        text: `${symbol} Calendar Spread P&L - Strike: $${strikePrice}`
+    };
+    
+    profitLossChart.update();
 }
 
 // Profit/Loss Chart
@@ -584,6 +856,7 @@ function refreshScan() {
         initializeStocksTable();
         updateDashboardStats();
         updateSystemStatus();
+        refreshCalendarDropdown();
         
         // Reset button after delay
         setTimeout(() => {
@@ -1057,8 +1330,8 @@ function displayActiveSymbols(symbols, defaultSymbols = []) {
     
     container.innerHTML = '';
     
-    if (symbols.length === 0) {
-        container.innerHTML = '<span class="help-text">No symbols configured</span>';
+    if (!symbols || symbols.length === 0) {
+        container.innerHTML = '<span class="help-text">No symbols configured. Click "Use Default" to load default symbols.</span>';
         return;
     }
     
@@ -1069,6 +1342,12 @@ function displayActiveSymbols(symbols, defaultSymbols = []) {
         tag.title = defaultSymbols.includes(symbol) ? 'Default symbol' : 'Custom symbol';
         container.appendChild(tag);
     });
+    
+    // Add a summary
+    const summary = document.createElement('div');
+    summary.className = 'symbols-summary';
+    summary.innerHTML = `<small class="help-text">${symbols.length} symbols active</small>`;
+    container.appendChild(summary);
 }
 
 function updateSymbolsCount() {
