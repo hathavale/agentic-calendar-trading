@@ -1,0 +1,79 @@
+{
+  "data_sources": {
+    "default": "alpha_vantage",
+    "fallback": "yfinance",
+    "sources": {
+      "alpha_vantage": {
+        "name": "Alpha Vantage",
+        "base_url": "https://www.alphavantage.co/query",
+        "requires_api_key": true,
+        "rate_limit_per_minute": 5,
+        "rate_limit_per_day": 500,
+        "supports_real_time": true,
+        "supports_historical": true,
+        "supports_fundamentals": true,
+        "api_key_env_var": "ALPHA_VANTAGE_API_KEY"
+      },
+      "yfinance": {
+        "name": "Yahoo Finance (yfinance)",
+        "base_url": null,
+        "requires_api_key": false,
+        "rate_limit_per_minute": 60,
+        "rate_limit_per_day": 2000,
+        "supports_real_time": true,
+        "supports_historical": true,
+        "supports_fundamentals": true,
+        "api_key_env_var": null
+      },
+      "eodhd": {
+        "name": "EOD Historical Data",
+        "base_url": "https://eodhistoricaldata.com/api",
+        "requires_api_key": true,
+        "rate_limit_per_minute": 20,
+        "rate_limit_per_day": 100000,
+        "supports_real_time": true,
+        "supports_historical": true,
+        "supports_fundamentals": true,
+        "api_key_env_var": "EODHD_API_KEY"
+      },
+      "yahoo_finance": {
+        "name": "Yahoo Finance API",
+        "base_url": "https://yfapi.net/v6/finance",
+        "requires_api_key": true,
+        "rate_limit_per_minute": 100,
+        "rate_limit_per_day": 10000,
+        "supports_real_time": true,
+        "supports_historical": true,
+        "supports_fundamentals": true,
+        "api_key_env_var": "YAHOO_FINANCE_API_KEY"
+      }
+    }
+  },
+  "cache": {
+    "duration_minutes": 15,
+    "max_size": 128,
+    "enable_persistence": false
+  },
+  "rate_limiting": {
+    "default_delay_seconds": 0.5,
+    "max_retries": 3,
+    "backoff_multiplier": 2,
+    "timeout_seconds": 10
+  },
+  "screening": {
+    "default_symbols": [
+      "SPY", "QQQ", "IWM", "XLF", "XLE", "TLT", "GLD",
+      "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA"
+    ],
+    "default_criteria": {
+      "atr_threshold": 0.05,
+      "iv_range": [20, 40],
+      "price_range": [50, 150],
+      "iv_percentile_max": 50,
+      "open_interest_min": 1000,
+      "price_stability_30d": 0.10,
+      "exclude_dividends": true,
+      "exclude_earnings": true
+    }
+  }
+}

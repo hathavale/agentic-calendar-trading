@@ -20,22 +20,13 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
 app.config['DEBUG'] = True
 
-# Initialize Data Fetcher with yfinance as default (free, no API key required)
-# Can be switched to other sources like 'eodhd', 'alpha_vantage', etc. with API keys
-data_fetcher = DataFetcher(source="yfinance")
+# Initialize Data Fetcher - will use Alpha Vantage as default from config
+# Fallback to yfinance if Alpha Vantage API key is not available
+data_fetcher = DataFetcher()
 
 # Application state - will be populated with real data
 APPLICATION_DATA = {
-    "screening_criteria": {
-        "atr_threshold": 0.05,
-        "iv_range": [20, 40],
-        "price_range": [50, 150],
-        "iv_percentile_max": 50,
-        "open_interest_min": 1000,
-        "price_stability_30d": 0.10,
-        "exclude_dividends": True,
-        "exclude_earnings": True
-    },
+    "screening_criteria": data_fetcher.get_default_criteria(),
     "qualified_stocks": [],
     "all_stocks": [],
     "calendar_spreads": [],

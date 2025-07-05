@@ -5,6 +5,7 @@ Combines multiple data sources with comprehensive stock screening capabilities
 
 import os
 import time
+import json
 import requests
 import yfinance as yf
 import pandas as pd
@@ -21,41 +22,133 @@ logger = logging.getLogger(__name__)
 class DataFetcher:
     """Enhanced data fetcher that abstracts multiple financial data sources with comprehensive analysis."""
     
-    # Popular ETFs and stocks for screening (reduced list to avoid rate limits)
-    DEFAULT_SYMBOLS = [
-        # ETFs (most popular)
-        'SPY', 'QQQ', 'IWM', 'XLF', 'XLE', 'TLT', 'GLD',
-        # Individual Stocks (blue chips)
-        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA'
-    ]
-    
-    def __init__(self, source: str = "yfinance", api_key: str = None):
+    def __init__(self, source: str = None, api_key: str = None, config_path: str = None):
         """
         Initialize DataFetcher with configurable data source
         
         Args:
-            source: Data source ('yfinance', 'eodhd', 'alpha_vantage', 'yahoo_finance')
-            api_key: API key for paid services
+            source: Data source ('yfinance', 'eodhd', 'alpha_vantage', 'yahoo_finance') or None for config default
+            api_key: API key for paid services or None to use environment variables
+            config_path: Path to configuration file or None for default location
         """
+        # Load configuration
+        self.config = self._load_config(config_path)
+        
+        # Set data source (use config default if not specified)
+        if source is None:
+            source = self.config['data_sources']['default']
         self.source = source.lower()
-        self.api_key = api_key or os.getenv("API_KEY")
+        
+        # Validate source is supported
+        if self.source not in self.config['data_sources']['sources']:
+            supported = list(self.config['data_sources']['sources'].keys())
+            raise ValueError(f"Unsupported data source: {self.source}. Supported: {supported}")
+        
+        # Get source configuration
+        self.source_config = self.config['data_sources']['sources'][self.source]
+        
+        # Set API key (prioritize parameter, then environment variable, then None)
+        if api_key:
+            self.api_key = api_key
+        elif self.source_config.get('api_key_env_var'):
+            self.api_key = os.getenv(self.source_config['api_key_env_var'])
+        else:
+            self.api_key = os.getenv("API_KEY")  # Fallback to generic API_KEY
+        
+        # Build base URLs from config
         self.base_urls = {
-            "eodhd": "https://eodhistoricaldata.com/api",
-            "alpha_vantage": "https://www.alphavantage.co/query",
-            "yahoo_finance": "https://yfapi.net/v6/finance",
-            "yfinance": None  # Uses yfinance library directly
+            source_name: source_info.get('base_url')
+            for source_name, source_info in self.config['data_sources']['sources'].items()
         }
         
-        # Cache and rate limiting
+        # Initialize cache and rate limiting from config
+        cache_config = self.config['cache']
+        rate_config = self.config['rate_limiting']
+        
         self.cache = {}
         self.cache_expiry = {}
-        self.cache_duration = timedelta(minutes=15)
-        self.request_delay = 0.5  # Delay between requests
+        self.cache_duration = timedelta(minutes=cache_config['duration_minutes'])
+        self.request_delay = rate_config['default_delay_seconds']
+        self.max_retries = rate_config['max_retries']
+        self.timeout = rate_config['timeout_seconds']
         
-        if self.source not in self.base_urls:
-            raise ValueError(f"Unsupported data source: {self.source}. Supported: {list(self.base_urls.keys())}")
+        # Get default symbols from config
+        self.DEFAULT_SYMBOLS = self.config['screening']['default_symbols']
         
-        logger.info(f"DataFetcher initialized with source: {self.source}")
+        logger.info(f"DataFetcher initialized with source: {self.source} (from config)")
+        if self.source_config.get('requires_api_key') and not self.api_key:
+            logger.warning(f"API key required for {self.source} but not provided. Set {self.source_config.get('api_key_env_var', 'API_KEY')} environment variable.")
+    
+    def _load_config(self, config_path: str = None) -> Dict[str, Any]:
+        """Load configuration from JSON file"""
+        if config_path is None:
+            # Default config path relative to this file
+            current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            config_path = os.path.join(current_dir, 'config.json')
+        
+        try:
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+            logger.info(f"Configuration loaded from: {config_path}")
+            return config
+        except FileNotFoundError:
+            logger.error(f"Configuration file not found: {config_path}")
+            # Return default configuration
+            return self._get_default_config()
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON in configuration file: {e}")
+            return self._get_default_config()
+    
+    def _get_default_config(self) -> Dict[str, Any]:
+        """Return default configuration if config file is not available"""
+        logger.warning("Using fallback default configuration")
+        return {
+            "data_sources": {
+                "default": "alpha_vantage",
+                "fallback": "yfinance",
+                "sources": {
+                    "alpha_vantage": {
+                        "name": "Alpha Vantage",
+                        "base_url": "https://www.alphavantage.co/query",
+                        "requires_api_key": True,
+                        "api_key_env_var": "ALPHA_VANTAGE_API_KEY"
+                    },
+                    "yfinance": {
+                        "name": "Yahoo Finance (yfinance)",
+                        "base_url": None,
+                        "requires_api_key": False,
+                        "api_key_env_var": None
+                    },
+                    "eodhd": {
+                        "name": "EOD Historical Data",
+                        "base_url": "https://eodhistoricaldata.com/api",
+                        "requires_api_key": True,
+                        "api_key_env_var": "EODHD_API_KEY"
+                    },
+                    "yahoo_finance": {
+                        "name": "Yahoo Finance API",
+                        "base_url": "https://yfapi.net/v6/finance",
+                        "requires_api_key": True,
+                        "api_key_env_var": "YAHOO_FINANCE_API_KEY"
+                    }
+                }
+            },
+            "cache": {
+                "duration_minutes": 15,
+                "max_size": 128
+            },
+            "rate_limiting": {
+                "default_delay_seconds": 0.5,
+                "max_retries": 3,
+                "timeout_seconds": 10
+            },
+            "screening": {
+                "default_symbols": [
+                    'SPY', 'QQQ', 'IWM', 'XLF', 'XLE', 'TLT', 'GLD',
+                    'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA'
+                ]
+            }
+        }
 
     def _is_cache_valid(self, cache_key: str) -> bool:
         """Check if cached data is still valid"""
@@ -122,10 +215,9 @@ class DataFetcher:
         headers = self._build_headers()
         params = self._build_params(symbol, start_date, end_date)
         
-        max_retries = 3
-        for attempt in range(max_retries):
+        for attempt in range(self.max_retries):
             try:
-                response = requests.get(url, headers=headers, params=params, timeout=10)
+                response = requests.get(url, headers=headers, params=params, timeout=self.timeout)
                 if response.status_code == 200:
                     data = response.json()
                     # Cache the result
@@ -135,7 +227,7 @@ class DataFetcher:
                     return data
                 elif response.status_code == 429:  # Too Many Requests
                     wait_time = 2 ** attempt  # Exponential backoff
-                    logger.warning(f"Rate limit hit for {symbol}. Retrying after {wait_time}s... (attempt {attempt + 1}/{max_retries})")
+                    logger.warning(f"Rate limit hit for {symbol}. Retrying after {wait_time}s... (attempt {attempt + 1}/{self.max_retries})")
                     time.sleep(wait_time)
                 elif response.status_code in [502, 503, 504]:  # Server errors
                     wait_time = 1 + attempt
@@ -146,13 +238,13 @@ class DataFetcher:
                     raise Exception(f"API error: {response.status_code} - {response.text}")
             except requests.RequestException as e:
                 logger.error(f"Request error for {symbol}: {str(e)}")
-                if attempt == max_retries - 1:  # Last attempt
+                if attempt == self.max_retries - 1:  # Last attempt
                     raise
                 wait_time = 2 ** attempt
                 logger.info(f"Retrying after {wait_time}s...")
                 time.sleep(wait_time)
         
-        raise Exception(f"Max retries ({max_retries}) exceeded due to throttling or errors.")
+        raise Exception(f"Max retries ({self.max_retries}) exceeded due to throttling or errors.")
 
     def fetch_stock_data(self, symbol: str, period: str = "3mo") -> Optional[Dict]:
         """
@@ -189,17 +281,19 @@ class DataFetcher:
                         return self._fetch_comprehensive_yfinance_data(symbol, period)
                 except Exception as api_error:
                     logger.warning(f"API {self.source} failed for {symbol}: {str(api_error)}")
-                    # Fallback to yfinance
-                    logger.info(f"Falling back to yfinance for {symbol}")
+                    # Fallback to configured fallback source
+                    fallback_source = self.config['data_sources']['fallback']
+                    logger.info(f"Falling back to {fallback_source} for {symbol}")
                     return self._fetch_comprehensive_yfinance_data(symbol, period)
                 
         except Exception as e:
             logger.error(f"Error fetching comprehensive data for {symbol}: {str(e)}")
             
-            # Try yfinance as ultimate fallback if not already using it
-            if self.source != "yfinance":
+            # Try configured fallback source if not already using it
+            fallback_source = self.config['data_sources']['fallback']
+            if self.source != fallback_source:
                 try:
-                    logger.info(f"Ultimate fallback to yfinance for {symbol}")
+                    logger.info(f"Ultimate fallback to {fallback_source} for {symbol}")
                     return self._fetch_comprehensive_yfinance_data(symbol, period)
                 except Exception as fallback_error:
                     logger.error(f"Fallback also failed for {symbol}: {str(fallback_error)}")
@@ -479,6 +573,19 @@ class DataFetcher:
     def get_default_symbols(self) -> List[str]:
         """Get list of default symbols for screening"""
         return self.DEFAULT_SYMBOLS.copy()
+    
+    def get_default_criteria(self) -> Dict[str, Any]:
+        """Get default screening criteria from configuration"""
+        return self.config['screening'].get('default_criteria', {
+            'atr_threshold': 0.05,
+            'iv_range': [20, 40],
+            'price_range': [50, 150],
+            'iv_percentile_max': 50,
+            'open_interest_min': 1000,
+            'price_stability_30d': 0.10,
+            'exclude_dividends': True,
+            'exclude_earnings': True
+        }).copy()
 
     def clear_cache(self):
         """Clear the data cache"""
@@ -488,26 +595,47 @@ class DataFetcher:
 
     def set_data_source(self, source: str, api_key: str = None):
         """Change the data source dynamically"""
-        if source.lower() not in self.base_urls:
-            raise ValueError(f"Unsupported data source: {source}")
+        if source.lower() not in self.config['data_sources']['sources']:
+            supported = list(self.config['data_sources']['sources'].keys())
+            raise ValueError(f"Unsupported data source: {source}. Supported: {supported}")
         
         self.source = source.lower()
+        self.source_config = self.config['data_sources']['sources'][self.source]
+        
+        # Update API key if provided
         if api_key:
             self.api_key = api_key
+        elif self.source_config.get('api_key_env_var'):
+            self.api_key = os.getenv(self.source_config['api_key_env_var'])
         
         # Clear cache when switching sources
         self.clear_cache()
         logger.info(f"Data source changed to: {self.source}")
+        
+        # Warn if API key is required but not available
+        if self.source_config.get('requires_api_key') and not self.api_key:
+            logger.warning(f"API key required for {self.source} but not provided. Set {self.source_config.get('api_key_env_var', 'API_KEY')} environment variable.")
 
     def get_source_info(self) -> Dict[str, Any]:
         """Get information about current data source"""
         return {
             'source': self.source,
+            'source_name': self.source_config.get('name', self.source),
             'has_api_key': bool(self.api_key),
+            'requires_api_key': self.source_config.get('requires_api_key', False),
+            'api_key_env_var': self.source_config.get('api_key_env_var'),
             'cache_size': len(self.cache),
-            'supported_sources': list(self.base_urls.keys()),
+            'supported_sources': list(self.config['data_sources']['sources'].keys()),
+            'default_source': self.config['data_sources']['default'],
+            'fallback_source': self.config['data_sources']['fallback'],
             'cache_duration_minutes': self.cache_duration.total_seconds() / 60,
-            'request_delay_seconds': self.request_delay
+            'request_delay_seconds': self.request_delay,
+            'max_retries': self.max_retries,
+            'timeout_seconds': self.timeout,
+            'rate_limits': {
+                'per_minute': self.source_config.get('rate_limit_per_minute'),
+                'per_day': self.source_config.get('rate_limit_per_day')
+            }
         }
     
     def test_data_source(self, test_symbol: str = "AAPL") -> Dict[str, Any]:
