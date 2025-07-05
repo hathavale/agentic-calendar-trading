@@ -1,0 +1,116 @@
+INFO:services.data_fetcher:Configuration loaded from: /Users/herambhathavale/jupyterDir2/Jul-04-2-25-Agentic/agentic-calendar-trading/config.json
+INFO:services.data_fetcher:DataFetcher initialized with source: alpha_vantage (from config)
+INFO:__main__:Starting Flask application...
+INFO:__main__:Loading initial stock data...
+INFO:services.data_fetcher:Screening 14 stocks with criteria: {'atr_threshold': 0.05, 'iv_range': [20, 40], 'price_range': [50, 150], 'iv_percentile_max': 50, 'open_interest_min': 1000, 'price_stability_30d': 0.1, 'exclude_dividends': True, 'exclude_earnings': True}
+INFO:services.data_fetcher:Fetching comprehensive data for SPY using alpha_vantage
+INFO:services.data_fetcher:🔍 Requesting Alpha Vantage overview for SPY
+INFO:services.data_fetcher:📡 Alpha Vantage response status: 200
+WARNING:services.data_fetcher:🤔 Alpha Vantage overview returned unexpected format for SPY
+INFO:services.data_fetcher:🔍 Requesting Alpha Vantage quote for SPY
+INFO:services.data_fetcher:📡 Alpha Vantage quote response status: 200
+INFO:services.data_fetcher:✅ Successfully fetched quote for SPY
+INFO:services.data_fetcher:🔍 Requesting Alpha Vantage daily data for SPY
+INFO:services.data_fetcher:📡 Alpha Vantage daily data response status: 200
+INFO:services.data_fetcher:✅ Successfully fetched daily data for SPY (100 data points)
+INFO:services.data_fetcher:Successfully fetched comprehensive Alpha Vantage data for SPY
+ERROR:__main__:Error loading initial data: 'has_dividend'
+INFO:__main__:Loading sample data as fallback...
+INFO:__main__:Initial data loaded successfully
+ * Serving Flask app 'app'
+ * Debug mode: on
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5001
+ * Running on http://10.0.0.70:5001
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+INFO:services.data_fetcher:Configuration loaded from: /Users/herambhathavale/jupyterDir2/Jul-04-2-25-Agentic/agentic-calendar-trading/config.json
+INFO:services.data_fetcher:DataFetcher initialized with source: alpha_vantage (from config)
+INFO:__main__:Starting Flask application...
+INFO:__main__:Loading initial stock data...
+INFO:services.data_fetcher:Screening 14 stocks with criteria: {'atr_threshold': 0.05, 'iv_range': [20, 40], 'price_range': [50, 150], 'iv_percentile_max': 50, 'open_interest_min': 1000, 'price_stability_30d': 0.1, 'exclude_dividends': True, 'exclude_earnings': True}
+INFO:services.data_fetcher:Fetching comprehensive data for SPY using alpha_vantage
+INFO:services.data_fetcher:🔍 Requesting Alpha Vantage overview for SPY
+INFO:services.data_fetcher:📡 Alpha Vantage response status: 200
+WARNING:services.data_fetcher:🤔 Alpha Vantage overview returned unexpected format for SPY
+INFO:services.data_fetcher:🔍 Requesting Alpha Vantage quote for SPY
+INFO:services.data_fetcher:📡 Alpha Vantage quote response status: 200
+INFO:services.data_fetcher:✅ Successfully fetched quote for SPY
+INFO:services.data_fetcher:🔍 Requesting Alpha Vantage daily data for SPY
+INFO:services.data_fetcher:📡 Alpha Vantage daily data response status: 200
+INFO:services.data_fetcher:✅ Successfully fetched daily data for SPY (100 data points)
+INFO:services.data_fetcher:Successfully fetched comprehensive Alpha Vantage data for SPY
+ERROR:__main__:Error loading initial data: 'has_dividend'
+INFO:__main__:Loading sample data as fallback...
+INFO:__main__:Initial data loaded successfully
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 175-137-486
+Traceback (most recent call last):
+  File "/Users/herambhathavale/jupyterDir2/Jul-04-2-25-Agentic/agentic-calendar-trading/app.py", line 621, in <module>
+    app.run(debug=True, host='0.0.0.0', port=5001)
+  File "/Users/herambhathavale/jupyterDir2/Jul-04-2-25-Agentic/agentic-calendar-trading/venv/lib/python3.11/site-packages/flask/app.py", line 612, in run
+    run_simple(t.cast(str, host), port, self, **options)
+  File "/Users/herambhathavale/jupyterDir2/Jul-04-2-25-Agentic/agentic-calendar-trading/venv/lib/python3.11/site-packages/werkzeug/serving.py", line 1115, in run_simple
+    run_with_reloader(
+  File "/Users/herambhathavale/jupyterDir2/Jul-04-2-25-Agentic/agentic-calendar-trading/venv/lib/python3.11/site-packages/werkzeug/_reloader.py", line 459, in run_with_reloader
+    ensure_echo_on()
+  File "/Users/herambhathavale/jupyterDir2/Jul-04-2-25-Agentic/agentic-calendar-trading/venv/lib/python3.11/site-packages/werkzeug/_reloader.py", line 439, in ensure_echo_on
+    termios.tcsetattr(sys.stdin, termios.TCSANOW, attributes)
+termios.error: (4, 'Interrupted system call')
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+INFO:services.data_fetcher:Configuration loaded from: /Users/herambhathavale/jupyterDir2/Jul-04-2-25-Agentic/agentic-calendar-trading/config.json
+INFO:services.data_fetcher:DataFetcher initialized with source: alpha_vantage (from config)
+INFO:__main__:Starting Flask application...
+INFO:__main__:Loading initial stock data...
+INFO:services.data_fetcher:Screening 14 stocks with criteria: {'atr_threshold': 0.05, 'iv_range': [20, 40], 'price_range': [50, 150], 'iv_percentile_max': 50, 'open_interest_min': 1000, 'price_stability_30d': 0.1, 'exclude_dividends': True, 'exclude_earnings': True}
+INFO:services.data_fetcher:Fetching comprehensive data for SPY using alpha_vantage
+INFO:services.data_fetcher:🔍 Requesting Alpha Vantage overview for SPY
+INFO:services.data_fetcher:📡 Alpha Vantage response status: 200
+WARNING:services.data_fetcher:🤔 Alpha Vantage overview returned unexpected format for SPY
+INFO:services.data_fetcher:🔍 Requesting Alpha Vantage quote for SPY
+INFO:services.data_fetcher:📡 Alpha Vantage quote response status: 200
+INFO:services.data_fetcher:✅ Successfully fetched quote for SPY
+INFO:services.data_fetcher:🔍 Requesting Alpha Vantage daily data for SPY
+INFO:services.data_fetcher:📡 Alpha Vantage daily data response status: 200
+INFO:services.data_fetcher:✅ Successfully fetched daily data for SPY (100 data points)
+INFO:services.data_fetcher:Successfully fetched comprehensive Alpha Vantage data for SPY
+ERROR:__main__:Error loading initial data: 'has_dividend'
+INFO:__main__:Loading sample data as fallback...
+INFO:__main__:Initial data loaded successfully
+ * Serving Flask app 'app'
+ * Debug mode: on
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5001
+ * Running on http://10.0.0.70:5001
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+INFO:services.data_fetcher:Configuration loaded from: /Users/herambhathavale/jupyterDir2/Jul-04-2-25-Agentic/agentic-calendar-trading/config.json
+INFO:services.data_fetcher:DataFetcher initialized with source: alpha_vantage (from config)
+INFO:__main__:Starting Flask application...
+INFO:__main__:Loading initial stock data...
+INFO:services.data_fetcher:Screening 14 stocks with criteria: {'atr_threshold': 0.05, 'iv_range': [20, 40], 'price_range': [50, 150], 'iv_percentile_max': 50, 'open_interest_min': 1000, 'price_stability_30d': 0.1, 'exclude_dividends': True, 'exclude_earnings': True}
+INFO:services.data_fetcher:Fetching comprehensive data for SPY using alpha_vantage
+INFO:services.data_fetcher:🔍 Requesting Alpha Vantage overview for SPY
+INFO:services.data_fetcher:📡 Alpha Vantage response status: 200
+WARNING:services.data_fetcher:🤔 Alpha Vantage overview returned unexpected format for SPY
+INFO:services.data_fetcher:🔍 Requesting Alpha Vantage quote for SPY
+INFO:services.data_fetcher:📡 Alpha Vantage quote response status: 200
+INFO:services.data_fetcher:✅ Successfully fetched quote for SPY
+INFO:services.data_fetcher:🔍 Requesting Alpha Vantage daily data for SPY
+INFO:services.data_fetcher:📡 Alpha Vantage daily data response status: 200
+INFO:services.data_fetcher:✅ Successfully fetched daily data for SPY (100 data points)
+INFO:services.data_fetcher:Successfully fetched comprehensive Alpha Vantage data for SPY
+ERROR:__main__:Error loading initial data: 'has_dividend'
+INFO:__main__:Loading sample data as fallback...
+INFO:__main__:Initial data loaded successfully
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 175-137-486
+INFO:werkzeug:127.0.0.1 - - [04/Jul/2025 20:00:17] "GET / HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [04/Jul/2025 20:00:18] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+INFO:werkzeug:127.0.0.1 - - [04/Jul/2025 20:00:18] "[36mGET /static/js/app.js HTTP/1.1[0m" 304 -
+INFO:werkzeug:127.0.0.1 - - [04/Jul/2025 20:00:18] "GET /api/data HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [04/Jul/2025 20:00:18] "GET /api/data-source HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [04/Jul/2025 20:00:18] "[35m[1mGET /favicon.ico HTTP/1.1[0m" 204 -

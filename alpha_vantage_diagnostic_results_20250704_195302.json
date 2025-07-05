@@ -1,0 +1,32 @@
+{
+  "timestamp": "2025-07-04T19:53:01.858424",
+  "symbol": "SPY",
+  "tests": {
+    "api_key": {
+      "status": "FAIL",
+      "message": "API key not found in environment variables",
+      "recommendation": "Set ALPHA_VANTAGE_API_KEY environment variable"
+    },
+    "connectivity": {
+      "status": "PASS",
+      "message": "Successfully connected to Alpha Vantage (HTTP 200)",
+      "response_time": 0.158942
+    },
+    "overview": {
+      "status": "SKIP",
+      "message": "Skipping due to missing API key"
+    },
+    "quote": {
+      "status": "SKIP",
+      "message": "Skipping due to missing API key"
+    },
+    "daily": {
+      "status": "SKIP",
+      "message": "Skipping due to missing API key"
+    },
+    "rate_limit": {
+      "status": "SKIP",
+      "message": "Skipping due to missing API key"
+    }
+  }
+}

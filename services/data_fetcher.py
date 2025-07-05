@@ -378,83 +378,126 @@ class DataFetcher:
             # Alpha Vantage comprehensive data collection
             stock_data = {
                 'symbol': symbol,
-                'data_source': self.source
+                'data_source': self.source,
+                # Set default values for all required fields
+                'market_cap': 0,
+                'sector': 'Unknown',
+                'industry': 'Unknown',
+                'has_dividend': False,
+                'current_price': 0.0,
+                'volume': 0,
+                'atr_percentage': 0.0,
+                'price_stability_30d': 0.0,
+                'implied_volatility': 25.0,
+                'iv_percentile': 50.0,
+                'open_interest': 1000,
+                'has_earnings_soon': False
             }
             
             # 1. Get company overview (fundamentals)
             overview_data = self._get_alpha_vantage_overview(symbol)
             if overview_data:
-                stock_data.update({
-                    'market_cap': overview_data.get('MarketCapitalization', 0),
-                    'sector': overview_data.get('Sector', 'Unknown'),
-                    'industry': overview_data.get('Industry', 'Unknown'),
-                    'has_dividend': float(overview_data.get('DividendYield', 0)) > 0
-                })
+                # Only update fields that are available
+                if 'MarketCapitalization' in overview_data:
+                    try:
+                        stock_data['market_cap'] = int(float(overview_data['MarketCapitalization']))
+                    except (ValueError, TypeError):
+                        pass
+                
+                if 'Sector' in overview_data:
+                    stock_data['sector'] = overview_data['Sector']
+                    
+                if 'Industry' in overview_data:
+                    stock_data['industry'] = overview_data['Industry']
+                    
+                if 'DividendYield' in overview_data:
+                    try:
+                        dividend_yield = float(overview_data['DividendYield'])
+                        stock_data['has_dividend'] = dividend_yield > 0
+                    except (ValueError, TypeError):
+                        stock_data['has_dividend'] = False
+            else:
+                logger.warning(f"No overview data available for {symbol}, using defaults")
             
             # 2. Get current quote data
             quote_data = self._get_alpha_vantage_quote(symbol)
             if quote_data:
-                current_price = float(quote_data.get('05. price', 0))
-                volume = int(float(quote_data.get('06. volume', 0)))
-                stock_data.update({
-                    'current_price': round(current_price, 2),
-                    'volume': volume
-                })
+                try:
+                    current_price = float(quote_data.get('05. price', 0))
+                    volume = int(float(quote_data.get('06. volume', 0)))
+                    stock_data.update({
+                        'current_price': round(current_price, 2),
+                        'volume': volume
+                    })
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Error parsing quote data for {symbol}: {str(e)}")
+                    # Keep default values but don't return None - continue with other data
             else:
-                logger.warning(f"No quote data from Alpha Vantage for {symbol}")
-                return None
+                logger.warning(f"No quote data from Alpha Vantage for {symbol}, using fallback")
+                # Don't return None immediately - try to get some data and fall back to yfinance if needed
             
             # 3. Get historical data for technical analysis
             historical_data = self._get_alpha_vantage_daily(symbol)
+            hist_df = None
+            
             if historical_data and 'Time Series (Daily)' in historical_data:
                 hist_df = self._convert_alpha_vantage_to_dataframe(historical_data['Time Series (Daily)'])
                 
                 if not hist_df.empty:
-                    # Calculate technical indicators
-                    atr_percentage = self._calculate_atr_percentage(hist_df)
-                    price_stability_30d = self._calculate_price_stability(hist_df, days=30)
-                    
-                    stock_data.update({
-                        'atr_percentage': round(atr_percentage, 4),
-                        'price_stability_30d': round(price_stability_30d, 4)
-                    })
+                    try:
+                        # Calculate technical indicators
+                        atr_percentage = self._calculate_atr_percentage(hist_df)
+                        price_stability_30d = self._calculate_price_stability(hist_df, days=30)
+                        
+                        stock_data.update({
+                            'atr_percentage': round(atr_percentage, 4),
+                            'price_stability_30d': round(price_stability_30d, 4)
+                        })
+                    except Exception as e:
+                        logger.warning(f"Error calculating technical indicators for {symbol}: {str(e)}")
+                        # Keep default values
                 else:
-                    # Set default values if historical data processing fails
-                    stock_data.update({
-                        'atr_percentage': 0.0,
-                        'price_stability_30d': 0.0
-                    })
+                    logger.warning(f"Empty historical dataframe for {symbol}")
             else:
                 logger.warning(f"No historical data from Alpha Vantage for {symbol}")
-                stock_data.update({
-                    'atr_percentage': 0.0,
-                    'price_stability_30d': 0.0
-                })
             
             # 4. Estimate implied volatility (Alpha Vantage doesn't provide options data in free tier)
-            # We'll calculate based on historical volatility
-            implied_volatility, iv_percentile = self._calculate_iv_from_historical(hist_df if 'hist_df' in locals() else None)
-            stock_data.update({
-                'implied_volatility': round(implied_volatility, 1),
-                'iv_percentile': round(iv_percentile, 1)
-            })
+            try:
+                implied_volatility, iv_percentile = self._calculate_iv_from_historical(hist_df)
+                stock_data.update({
+                    'implied_volatility': round(implied_volatility, 1),
+                    'iv_percentile': round(iv_percentile, 1)
+                })
+            except Exception as e:
+                logger.warning(f"Error calculating IV for {symbol}: {str(e)}")
+                # Keep default values
             
             # 5. Estimate other metrics not directly available from Alpha Vantage
-            open_interest = self._estimate_open_interest_alpha_vantage(overview_data, stock_data.get('current_price', 0))
-            has_earnings_soon = self._check_upcoming_earnings_alpha_vantage(overview_data)
+            try:
+                open_interest = self._estimate_open_interest_alpha_vantage(overview_data, stock_data.get('current_price', 0))
+                has_earnings_soon = self._check_upcoming_earnings_alpha_vantage(overview_data)
+                
+                stock_data.update({
+                    'open_interest': open_interest,
+                    'has_earnings_soon': has_earnings_soon
+                })
+            except Exception as e:
+                logger.warning(f"Error estimating additional metrics for {symbol}: {str(e)}")
+                # Keep default values
             
-            stock_data.update({
-                'open_interest': open_interest,
-                'has_earnings_soon': has_earnings_soon
-            })
-            
-            # Cache the result
-            cache_key = f"stock_data_{symbol}_{period}"
-            self.cache[cache_key] = stock_data
-            self.cache_expiry[cache_key] = datetime.now() + self.cache_duration
-            
-            logger.info(f"Successfully fetched comprehensive Alpha Vantage data for {symbol}")
-            return stock_data
+            # If we have minimal data (at least current price or some basic info), return it
+            # Otherwise, fall back to yfinance
+            if stock_data.get('current_price', 0) > 0 or overview_data:
+                # Cache the result
+                cache_key = f"stock_data_{symbol}_{period}"
+                self.cache[cache_key] = stock_data
+                self.cache_expiry[cache_key] = datetime.now() + self.cache_duration
+                
+                logger.info(f"Successfully fetched Alpha Vantage data for {symbol}")
+                return stock_data
+            else:
+                logger.warning(f"Insufficient Alpha Vantage data for {symbol}, falling back to yfinance")
+                return self._fetch_comprehensive_yfinance_data(symbol, period)
             
         except Exception as e:
             logger.error(f"Error in Alpha Vantage comprehensive data fetch for {symbol}: {str(e)}")
