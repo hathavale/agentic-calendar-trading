@@ -473,6 +473,133 @@ def data_source():
             "message": f"Failed to manage data source: {str(e)}"
         }), 500
 
+@app.route('/api/diagnostics', methods=['GET'])
+def api_diagnostics():
+    """Run Alpha Vantage API diagnostics"""
+    try:
+        from diagnostics.alpha_vantage_diagnostic import AlphaVantageDiagnostic
+        
+        # Get symbol from query parameter, default to AAPL
+        symbol = request.args.get('symbol', 'AAPL')
+        
+        # Run diagnostics
+        diagnostic = AlphaVantageDiagnostic()
+        results = diagnostic.run_full_diagnostic(symbol)
+        
+        # Add current data source info
+        results['current_config'] = {
+            'default_source': data_fetcher.source,
+            'available_sources': list(data_fetcher.config['data_sources']['sources'].keys()),
+            'api_key_present': bool(data_fetcher.api_key),
+            'fallback_enabled': True
+        }
+        
+        return jsonify({
+            'success': True,
+            'data': results
+        })
+        
+    except Exception as e:
+        logger.error(f"Diagnostics API error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/diagnostics/simple', methods=['GET'])
+def api_diagnostics_simple():
+    """Run simple Alpha Vantage connectivity test"""
+    try:
+        import requests
+        import os
+        
+        api_key = os.getenv('ALPHA_VANTAGE_API_KEY')
+        symbol = request.args.get('symbol', 'AAPL')
+        
+        if not api_key:
+            return jsonify({
+                'success': False,
+                'error': 'ALPHA_VANTAGE_API_KEY environment variable not set',
+                'recommendations': [
+                    'Set ALPHA_VANTAGE_API_KEY environment variable',
+                    'Get free API key from https://www.alphavantage.co/support/#api-key',
+                    'System will fallback to yfinance if Alpha Vantage is unavailable'
+                ]
+            })
+        
+        # Test basic connectivity
+        response = requests.get(
+            'https://www.alphavantage.co/query',
+            params={
+                'function': 'GLOBAL_QUOTE',
+                'symbol': symbol,
+                'apikey': api_key
+            },
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            if 'Error Message' in data:
+                return jsonify({
+                    'success': False,
+                    'error': f"Alpha Vantage API Error: {data['Error Message']}",
+                    'recommendations': [
+                        'Check if symbol is valid',
+                        'Try a different symbol (e.g., AAPL, MSFT, GOOGL)'
+                    ]
+                })
+            elif 'Note' in data:
+                return jsonify({
+                    'success': False,
+                    'error': f"Rate Limited: {data['Note']}",
+                    'recommendations': [
+                        'Wait before making more requests',
+                        'Consider upgrading to premium API plan',
+                        'System will use yfinance as fallback'
+                    ]
+                })
+            elif 'Global Quote' in data:
+                quote = data['Global Quote']
+                return jsonify({
+                    'success': True,
+                    'message': f'Alpha Vantage API working correctly for {symbol}',
+                    'data': {
+                        'symbol': symbol,
+                        'price': quote.get('05. price', 'N/A'),
+                        'change': quote.get('09. change', 'N/A'),
+                        'api_response_time': response.elapsed.total_seconds()
+                    }
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Unexpected response format from Alpha Vantage',
+                    'response_preview': str(data)[:200]
+                })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'HTTP {response.status_code} error from Alpha Vantage',
+                'recommendations': [
+                    'Check internet connection',
+                    'Verify Alpha Vantage service status',
+                    'Try again in a few minutes'
+                ]
+            })
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Diagnostic error: {str(e)}',
+            'recommendations': [
+                'Check internet connection',
+                'Verify environment variables',
+                'Check application logs for more details'
+            ]
+        })
+
 @app.errorhandler(404)
 def not_found_error(error):
     return render_template('404.html'), 404

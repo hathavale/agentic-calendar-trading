@@ -345,6 +345,11 @@ function initializeProfitLossChart() {
 
 // Settings Management
 function initializeSettings() {
+    console.log('Initializing settings...');
+    
+    // Initialize data source diagnostics
+    initializeDataSourceStatus();
+    
     if (!applicationData.screening_criteria) {
         console.warn('No screening criteria found in application data');
         return;
@@ -649,19 +654,321 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
-// Event Listeners
-function bindEventListeners() {
-    const themeToggle = document.getElementById('theme-toggle');
-    const stockFilter = document.getElementById('stock-filter');
-    const refreshScanBtn = document.getElementById('refresh-scan');
-    const exportStocksBtn = document.getElementById('export-stocks');
-    const applySettingsBtn = document.getElementById('apply-settings');
-    const resetSettingsBtn = document.getElementById('reset-settings');
+// Data Source Diagnostics
+function initializeDataSourceStatus() {
+    // Load current data source status
+    loadDataSourceStatus();
     
+    // Bind diagnostic event listeners
+    const testAlphaVantageBtn = document.getElementById('test-alpha-vantage');
+    const fullDiagnosticsBtn = document.getElementById('run-full-diagnostics');
+    const troubleshootingBtn = document.getElementById('view-troubleshooting');
+    
+    if (testAlphaVantageBtn) {
+        testAlphaVantageBtn.addEventListener('click', testAlphaVantage);
+    }
+    
+    if (fullDiagnosticsBtn) {
+        fullDiagnosticsBtn.addEventListener('click', runFullDiagnostics);
+    }
+    
+    if (troubleshootingBtn) {
+        troubleshootingBtn.addEventListener('click', viewTroubleshooting);
+    }
+}
+
+async function loadDataSourceStatus() {
+    try {
+        const response = await fetch('/api/data-source');
+        const data = await response.json();
+        
+        if (data.success) {
+            updateDataSourceUI(data.config);
+        } else {
+            console.error('Failed to load data source status:', data.error);
+        }
+    } catch (error) {
+        console.error('Error loading data source status:', error);
+    }
+}
+
+function updateDataSourceUI(config) {
+    // Update header indicator
+    const headerDataSource = document.getElementById('header-data-source');
+    const headerSourceStatus = document.getElementById('header-source-status');
+    
+    if (headerDataSource) {
+        headerDataSource.textContent = config.current_source === 'alpha_vantage' ? 'Alpha Vantage' : 'yfinance';
+    }
+    
+    if (headerSourceStatus) {
+        headerSourceStatus.className = `source-status ${config.api_key_present ? 'active' : 'warning'}`;
+    }
+    
+    // Update settings panel
+    const currentDataSource = document.getElementById('current-data-source');
+    const alphaVantageStatus = document.getElementById('alpha-vantage-status');
+    
+    if (currentDataSource) {
+        currentDataSource.textContent = config.current_source === 'alpha_vantage' ? 'Alpha Vantage (Primary)' : 'yfinance (Fallback)';
+    }
+    
+    if (alphaVantageStatus) {
+        const statusText = config.api_key_present ? 'API Key Present' : 'API Key Missing';
+        const statusClass = config.api_key_present ? 'status--success' : 'status--warning';
+        alphaVantageStatus.innerHTML = `<span class="status ${statusClass}">${statusText}</span>`;
+    }
+}
+
+async function testAlphaVantage() {
+    const testBtn = document.getElementById('test-alpha-vantage');
+    const diagnosticResults = document.getElementById('diagnostic-results');
+    const diagnosticOutput = document.getElementById('diagnostic-output');
+    
+    if (testBtn) {
+        testBtn.disabled = true;
+        testBtn.textContent = 'Testing...';
+    }
+    
+    try {
+        const response = await fetch('/api/diagnostics/simple?symbol=AAPL');
+        const data = await response.json();
+        
+        if (diagnosticOutput) {
+            if (data.success) {
+                diagnosticOutput.innerHTML = `
+                    <div class="diagnostic-success">
+                        <h6>✅ Alpha Vantage Test Successful</h6>
+                        <p>${data.message}</p>
+                        <div class="diagnostic-details">
+                            <p><strong>Symbol:</strong> ${data.data.symbol}</p>
+                            <p><strong>Price:</strong> $${data.data.price}</p>
+                            <p><strong>Change:</strong> ${data.data.change}</p>
+                            <p><strong>Response Time:</strong> ${data.data.api_response_time.toFixed(2)}s</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                diagnosticOutput.innerHTML = `
+                    <div class="diagnostic-error">
+                        <h6>❌ Alpha Vantage Test Failed</h6>
+                        <p><strong>Error:</strong> ${data.error}</p>
+                        ${data.recommendations ? `
+                            <div class="recommendations">
+                                <h6>Recommendations:</h6>
+                                <ul>
+                                    ${data.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+        }
+        
+        if (diagnosticResults) {
+            diagnosticResults.style.display = 'block';
+        }
+        
+    } catch (error) {
+        if (diagnosticOutput) {
+            diagnosticOutput.innerHTML = `
+                <div class="diagnostic-error">
+                    <h6>💥 Test Error</h6>
+                    <p>Failed to run diagnostic test: ${error.message}</p>
+                </div>
+            `;
+        }
+        
+        if (diagnosticResults) {
+            diagnosticResults.style.display = 'block';
+        }
+    } finally {
+        if (testBtn) {
+            testBtn.disabled = false;
+            testBtn.textContent = 'Test Alpha Vantage';
+        }
+    }
+}
+
+async function runFullDiagnostics() {
+    const fullBtn = document.getElementById('run-full-diagnostics');
+    const diagnosticResults = document.getElementById('diagnostic-results');
+    const diagnosticOutput = document.getElementById('diagnostic-output');
+    
+    if (fullBtn) {
+        fullBtn.disabled = true;
+        fullBtn.textContent = 'Running...';
+    }
+    
+    try {
+        const response = await fetch('/api/diagnostics?symbol=AAPL');
+        const data = await response.json();
+        
+        if (diagnosticOutput) {
+            if (data.success) {
+                const results = data.data;
+                let html = `
+                    <div class="diagnostic-full">
+                        <h6>🔍 Full Diagnostic Report</h6>
+                        <p><strong>Timestamp:</strong> ${new Date(results.timestamp).toLocaleString()}</p>
+                        <p><strong>Symbol:</strong> ${results.symbol}</p>
+                        
+                        <div class="test-results">
+                `;
+                
+                for (const [testName, testResult] of Object.entries(results.tests)) {
+                    const statusIcon = testResult.status === 'PASS' ? '✅' : 
+                                     testResult.status === 'FAIL' ? '❌' : 
+                                     testResult.status === 'RATE_LIMITED' ? '⚠️' : 'ℹ️';
+                    
+                    html += `
+                        <div class="test-result">
+                            <h6>${statusIcon} ${testName.toUpperCase()}</h6>
+                            <p>${testResult.message}</p>
+                            ${testResult.recommendation ? `<p class="recommendation"><strong>Recommendation:</strong> ${testResult.recommendation}</p>` : ''}
+                        </div>
+                    `;
+                }
+                
+                html += `
+                        </div>
+                        
+                        <div class="config-info">
+                            <h6>Current Configuration</h6>
+                            <p><strong>Default Source:</strong> ${results.current_config.default_source}</p>
+                            <p><strong>API Key Present:</strong> ${results.current_config.api_key_present ? 'Yes' : 'No'}</p>
+                            <p><strong>Fallback Enabled:</strong> ${results.current_config.fallback_enabled ? 'Yes' : 'No'}</p>
+                        </div>
+                    </div>
+                `;
+                
+                diagnosticOutput.innerHTML = html;
+            } else {
+                diagnosticOutput.innerHTML = `
+                    <div class="diagnostic-error">
+                        <h6>❌ Diagnostic Failed</h6>
+                        <p>${data.error}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        if (diagnosticResults) {
+            diagnosticResults.style.display = 'block';
+        }
+        
+    } catch (error) {
+        if (diagnosticOutput) {
+            diagnosticOutput.innerHTML = `
+                <div class="diagnostic-error">
+                    <h6>💥 Diagnostic Error</h6>
+                    <p>Failed to run full diagnostics: ${error.message}</p>
+                </div>
+            `;
+        }
+        
+        if (diagnosticResults) {
+            diagnosticResults.style.display = 'block';
+        }
+    } finally {
+        if (fullBtn) {
+            fullBtn.disabled = false;
+            fullBtn.textContent = 'Full Diagnostics';
+        }
+    }
+}
+
+function viewTroubleshooting() {
+    // Open troubleshooting guide in a new window/tab
+    const troubleshootingContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Alpha Vantage Troubleshooting Guide</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+                h1, h2, h3 { color: #333; }
+                .solution { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+                .error { color: #d32f2f; }
+                .success { color: #388e3c; }
+                .warning { color: #f57c00; }
+                code { background: #f0f0f0; padding: 2px 4px; border-radius: 3px; }
+                pre { background: #f0f0f0; padding: 10px; border-radius: 5px; overflow-x: auto; }
+            </style>
+        </head>
+        <body>
+            <h1>Alpha Vantage API Troubleshooting Guide</h1>
+            
+            <h2>Common Issues and Solutions</h2>
+            
+            <div class="solution">
+                <h3>🔑 "API key not found" Error</h3>
+                <p><strong>Problem:</strong> Alpha Vantage API key is missing or not set correctly.</p>
+                <p><strong>Solution:</strong></p>
+                <pre>export ALPHA_VANTAGE_API_KEY="your_api_key_here"</pre>
+                <p>Get a free API key from: <a href="https://www.alphavantage.co/support/#api-key" target="_blank">Alpha Vantage</a></p>
+            </div>
+            
+            <div class="solution">
+                <h3>⚠️ "Rate Limited" Error</h3>
+                <p><strong>Problem:</strong> Exceeded API rate limits (5 requests/minute for free tier).</p>
+                <p><strong>Solution:</strong> Wait 15 minutes or upgrade to premium plan.</p>
+            </div>
+            
+            <div class="solution">
+                <h3>🌐 Connection Issues</h3>
+                <p><strong>Problem:</strong> Network connectivity or firewall blocking requests.</p>
+                <p><strong>Solution:</strong> Check internet connection and ensure HTTPS (443) is allowed.</p>
+            </div>
+            
+            <div class="solution">
+                <h3>🤔 "Unexpected response format"</h3>
+                <p><strong>Problem:</strong> Invalid symbol or API response format changed.</p>
+                <p><strong>Solution:</strong> Verify ticker symbol is valid (e.g., AAPL, MSFT, GOOGL).</p>
+            </div>
+            
+            <h2>System Behavior</h2>
+            <p>The system automatically falls back to yfinance when Alpha Vantage is unavailable:</p>
+            <ol>
+                <li>Alpha Vantage (Primary) - Comprehensive data</li>
+                <li>yfinance (Fallback) - Basic data</li>
+                <li>Sample data (Demo)</li>
+            </ol>
+            
+            <h2>Need More Help?</h2>
+            <p>Run the diagnostic tools in the Settings tab or check the application logs for detailed error information.</p>
+        </body>
+        </html>
+    `;
+    
+    const newWindow = window.open('', '_blank');
+    newWindow.document.write(troubleshootingContent);
+    newWindow.document.close();
+}
+
+// Update bindEventListeners to include diagnostic functionality
+function bindEventListeners() {
+    // Theme toggle
+    const themeToggle = document.getElementById('theme-toggle');
     if (themeToggle) {
         themeToggle.addEventListener('click', toggleTheme);
     }
     
+    // Refresh scan
+    const refreshScanBtn = document.getElementById('refresh-scan');
+    if (refreshScanBtn) {
+        refreshScanBtn.addEventListener('click', refreshScan);
+    }
+    
+    // Export stocks
+    const exportStocksBtn = document.getElementById('export-stocks');
+    if (exportStocksBtn) {
+        exportStocksBtn.addEventListener('click', exportStocksToCSV);
+    }
+    
+    // Stock filter
+    const stockFilter = document.getElementById('stock-filter');
     if (stockFilter) {
         stockFilter.addEventListener('change', (e) => {
             currentFilter = e.target.value;
@@ -669,13 +976,9 @@ function bindEventListeners() {
         });
     }
     
-    if (refreshScanBtn) {
-        refreshScanBtn.addEventListener('click', refreshScan);
-    }
-    
-    if (exportStocksBtn) {
-        exportStocksBtn.addEventListener('click', exportStocksToCSV);
-    }
+    // Settings buttons
+    const applySettingsBtn = document.getElementById('apply-settings');
+    const resetSettingsBtn = document.getElementById('reset-settings');
     
     if (applySettingsBtn) {
         applySettingsBtn.addEventListener('click', applySettings);

@@ -12,7 +12,14 @@
         "supports_real_time": true,
         "supports_historical": true,
         "supports_fundamentals": true,
-        "api_key_env_var": "ALPHA_VANTAGE_API_KEY"
+        "supports_comprehensive_analysis": true,
+        "api_key_env_var": "ALPHA_VANTAGE_API_KEY",
+        "endpoints": {
+          "overview": "OVERVIEW",
+          "quote": "GLOBAL_QUOTE", 
+          "daily": "TIME_SERIES_DAILY",
+          "technical": "Available via separate calls"
+        }
       },
       "yfinance": {
         "name": "Yahoo Finance (yfinance)",
@@ -23,7 +30,9 @@
         "supports_real_time": true,
         "supports_historical": true,
         "supports_fundamentals": true,
-        "api_key_env_var": null
+        "supports_comprehensive_analysis": true,
+        "api_key_env_var": null,
+        "note": "Fallback source when premium APIs unavailable"
       },
       "eodhd": {
         "name": "EOD Historical Data",

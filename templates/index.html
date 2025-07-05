@@ -15,6 +15,11 @@
                 <div class="header-content">
                     <h1>Agentic Calendar Spread Trading System</h1>
                     <div class="header-actions">
+                        <div class="data-source-indicator">
+                            <span class="source-label">Data:</span>
+                            <span id="header-data-source" class="source-name">Alpha Vantage</span>
+                            <span id="header-source-status" class="source-status active">●</span>
+                        </div>
                         <button class="btn btn--sm btn--outline" id="theme-toggle">
                             <span id="theme-icon">🌙</span>
                         </button>
@@ -307,49 +312,91 @@
                     <!-- Settings Tab -->
                     <div class="tab-pane" id="settings">
                         <div class="settings-header">
-                            <h3>Screening Parameters</h3>
-                            <p>Adjust the criteria for stock screening and calendar spread analysis</p>
+                            <h3>System Configuration</h3>
+                            <p>Adjust screening parameters and manage data source settings</p>
                         </div>
 
                         <div class="settings-content">
-                            <div class="settings-grid">
-                                <div class="setting-group">
-                                    <label class="form-label">ATR Threshold (%)</label>
-                                    <input type="number" class="form-control" id="atr-threshold" value="5" min="1" max="20" step="0.1">
+                            <!-- Data Source Diagnostics Section -->
+                            <div class="card mb-4">
+                                <div class="card__header">
+                                    <h4>Data Source Status & Diagnostics</h4>
                                 </div>
-                                <div class="setting-group">
-                                    <label class="form-label">Min Implied Volatility (%)</label>
-                                    <input type="number" class="form-control" id="iv-min" value="20" min="10" max="50" step="1">
-                                </div>
-                                <div class="setting-group">
-                                    <label class="form-label">Max Implied Volatility (%)</label>
-                                    <input type="number" class="form-control" id="iv-max" value="40" min="30" max="100" step="1">
-                                </div>
-                                <div class="setting-group">
-                                    <label class="form-label">Min Stock Price ($)</label>
-                                    <input type="number" class="form-control" id="price-min" value="50" min="10" max="500" step="1">
-                                </div>
-                                <div class="setting-group">
-                                    <label class="form-label">Max Stock Price ($)</label>
-                                    <input type="number" class="form-control" id="price-max" value="150" min="50" max="1000" step="1">
-                                </div>
-                                <div class="setting-group">
-                                    <label class="form-label">IV Percentile Max (%)</label>
-                                    <input type="number" class="form-control" id="iv-percentile-max" value="50" min="10" max="100" step="1">
-                                </div>
-                                <div class="setting-group">
-                                    <label class="form-label">Min Open Interest</label>
-                                    <input type="number" class="form-control" id="open-interest-min" value="1000" min="100" max="50000" step="100">
-                                </div>
-                                <div class="setting-group">
-                                    <label class="form-label">30-Day Price Stability (%)</label>
-                                    <input type="number" class="form-control" id="price-stability-max" value="10" min="5" max="30" step="0.1">
+                                <div class="card__body">
+                                    <div class="data-source-status">
+                                        <div class="status-item">
+                                            <span class="status-label">Current Source:</span>
+                                            <span id="current-data-source" class="status-value">Loading...</span>
+                                        </div>
+                                        <div class="status-item">
+                                            <span class="status-label">Alpha Vantage API:</span>
+                                            <span id="alpha-vantage-status" class="status-value">Loading...</span>
+                                        </div>
+                                        <div class="status-item">
+                                            <span class="status-label">Fallback Available:</span>
+                                            <span id="fallback-status" class="status-value">yfinance Ready</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="diagnostic-actions">
+                                        <button class="btn btn--sm btn--secondary" id="test-alpha-vantage">Test Alpha Vantage</button>
+                                        <button class="btn btn--sm btn--info" id="run-full-diagnostics">Full Diagnostics</button>
+                                        <button class="btn btn--sm btn--outline" id="view-troubleshooting">Troubleshooting Guide</button>
+                                    </div>
+                                    
+                                    <div id="diagnostic-results" class="diagnostic-results" style="display: none;">
+                                        <h5>Diagnostic Results</h5>
+                                        <div id="diagnostic-output"></div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="settings-actions">
-                                <button class="btn btn--primary" id="apply-settings">Apply Settings</button>
-                                <button class="btn btn--secondary" id="reset-settings">Reset to Default</button>
+                            <!-- Screening Parameters Section -->
+                            <div class="card">
+                                <div class="card__header">
+                                    <h4>Screening Parameters</h4>
+                                </div>
+                                <div class="card__body">
+                                    <div class="settings-grid">
+                                        <div class="setting-group">
+                                            <label class="form-label">ATR Threshold (%)</label>
+                                            <input type="number" class="form-control" id="atr-threshold" value="5" min="1" max="20" step="0.1">
+                                        </div>
+                                        <div class="setting-group">
+                                            <label class="form-label">Min Implied Volatility (%)</label>
+                                            <input type="number" class="form-control" id="iv-min" value="20" min="10" max="50" step="1">
+                                        </div>
+                                        <div class="setting-group">
+                                            <label class="form-label">Max Implied Volatility (%)</label>
+                                            <input type="number" class="form-control" id="iv-max" value="40" min="30" max="100" step="1">
+                                        </div>
+                                        <div class="setting-group">
+                                            <label class="form-label">Min Stock Price ($)</label>
+                                            <input type="number" class="form-control" id="price-min" value="50" min="10" max="500" step="1">
+                                        </div>
+                                        <div class="setting-group">
+                                            <label class="form-label">Max Stock Price ($)</label>
+                                            <input type="number" class="form-control" id="price-max" value="150" min="50" max="1000" step="1">
+                                        </div>
+                                        <div class="setting-group">
+                                            <label class="form-label">IV Percentile Max (%)</label>
+                                            <input type="number" class="form-control" id="iv-percentile-max" value="50" min="10" max="100" step="1">
+                                        </div>
+                                        <div class="setting-group">
+                                            <label class="form-label">Min Open Interest</label>
+                                            <input type="number" class="form-control" id="open-interest-min" value="1000" min="100" max="50000" step="100">
+                                        </div>
+                                        <div class="setting-group">
+                                            <label class="form-label">30-Day Price Stability (%)</label>
+                                            <input type="number" class="form-control" id="price-stability-max" value="10" min="5" max="30" step="0.1">
+                                        </div>
+                                    </div>
+
+                                    <div class="settings-actions">
+                                        <button class="btn btn--primary" id="apply-settings">Apply Settings</button>
+                                        <button class="btn btn--secondary" id="reset-settings">Reset to Default</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
