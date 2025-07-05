@@ -112,6 +112,42 @@
 
                     <!-- Stock Screening Tab -->
                     <div class="tab-pane" id="screening">
+                        <!-- Custom Symbols Section -->
+                        <div class="symbols-input-section">
+                            <div class="symbols-header">
+                                <h3>Stock Symbols Configuration</h3>
+                                <div class="symbols-actions">
+                                    <button class="btn btn--sm btn--secondary" id="load-default-symbols">Use Default</button>
+                                    <button class="btn btn--sm btn--primary" id="apply-custom-symbols">Apply Custom Symbols</button>
+                                </div>
+                            </div>
+                            <div class="symbols-input-container">
+                                <div class="symbols-input-group">
+                                    <label for="custom-symbols-input">Enter Stock Symbols (comma-separated):</label>
+                                    <textarea 
+                                        id="custom-symbols-input" 
+                                        class="form-control symbols-textarea" 
+                                        placeholder="Enter stock symbols separated by commas, e.g., AAPL, MSFT, GOOGL, AMZN, TSLA, META, NVDA..."
+                                        rows="3"></textarea>
+                                    <div class="symbols-help">
+                                        <small class="help-text">
+                                            <span class="symbols-count">Current symbols: <span id="symbols-count">0</span></span>
+                                            <span class="symbols-examples">Examples: AAPL, MSFT, GOOGL, AMZN, TSLA, META, NVDA, SPY, QQQ</span>
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="current-symbols">
+                                    <h4>Currently Active Symbols:</h4>
+                                    <div id="active-symbols-display" class="symbols-tags">
+                                        <!-- Symbols will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="symbols-status" id="symbols-status">
+                                <!-- Status messages will appear here -->
+                            </div>
+                        </div>
+
                         <div class="screening-controls">
                             <div class="controls-header">
                                 <h3>Screening Criteria</h3>

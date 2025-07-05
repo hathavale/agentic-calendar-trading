@@ -1,0 +1,70 @@
+{
+  "timestamp": "2025-07-04T22:25:37.059921",
+  "symbol": "AAPL",
+  "tests": {
+    "api_key": {
+      "status": "PASS",
+      "message": "API key found (16 characters)",
+      "key_preview": "H0NS...KE3R"
+    },
+    "connectivity": {
+      "status": "PASS",
+      "message": "Successfully connected to Alpha Vantage (HTTP 200)",
+      "response_time": 0.17821
+    },
+    "overview": {
+      "status": "PASS",
+      "message": "Successfully retrieved overview for AAPL",
+      "company_name": "Apple Inc",
+      "sector": "TECHNOLOGY",
+      "data_keys": [
+        "Symbol",
+        "AssetType",
+        "Name",
+        "Description",
+        "CIK",
+        "Exchange",
+        "Currency",
+        "Country",
+        "Sector",
+        "Industry"
+      ]
+    },
+    "quote": {
+      "status": "PASS",
+      "message": "Successfully retrieved quote for AAPL",
+      "price": "213.5500",
+      "change": "1.1100",
+      "quote_keys": [
+        "01. symbol",
+        "02. open",
+        "03. high",
+        "04. low",
+        "05. price",
+        "06. volume",
+        "07. latest trading day",
+        "08. previous close",
+        "09. change",
+        "10. change percent"
+      ]
+    },
+    "daily": {
+      "status": "PASS",
+      "message": "Successfully retrieved daily data for AAPL",
+      "data_points": 100,
+      "latest_date": "2025-07-03",
+      "latest_close": "213.5500"
+    },
+    "rate_limit": {
+      "status": "INFO",
+      "message": "Rate limit test completed",
+      "response_codes": [
+        200,
+        200,
+        200
+      ],
+      "avg_response_time": 0.2391796112060547,
+      "recommendation": "Free tier: 5 requests/minute, 500 requests/day"
+    }
+  }
+}

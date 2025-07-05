@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeStocksTable();
         initializeCalendarSpreads();
         initializeSettings();
+        initializeSymbolsInput();
         bindEventListeners();
         
         // Initialize chart after a short delay to ensure DOM is ready
@@ -986,6 +987,220 @@ function bindEventListeners() {
     
     if (resetSettingsBtn) {
         resetSettingsBtn.addEventListener('click', resetSettings);
+    }
+    
+    // Symbols management buttons
+    const applyCustomSymbolsBtn = document.getElementById('apply-custom-symbols');
+    const loadDefaultSymbolsBtn = document.getElementById('load-default-symbols');
+    
+    if (applyCustomSymbolsBtn) {
+        applyCustomSymbolsBtn.addEventListener('click', applyCustomSymbols);
+    }
+    
+    if (loadDefaultSymbolsBtn) {
+        loadDefaultSymbolsBtn.addEventListener('click', loadDefaultSymbols);
+    }
+    
+    // Symbols input keyboard shortcuts
+    const symbolsInput = document.getElementById('custom-symbols-input');
+    if (symbolsInput) {
+        symbolsInput.addEventListener('keydown', (e) => {
+            // Allow Ctrl+Enter or Cmd+Enter to apply symbols
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                applyCustomSymbols();
+            }
+        });
+    }
+}
+
+// Symbols Input Management
+function initializeSymbolsInput() {
+    loadCurrentSymbols();
+    updateSymbolsCount();
+    
+    // Add input event listener for real-time counting
+    const symbolsInput = document.getElementById('custom-symbols-input');
+    if (symbolsInput) {
+        symbolsInput.addEventListener('input', updateSymbolsCount);
+    }
+}
+
+async function loadCurrentSymbols() {
+    try {
+        const response = await fetch('/api/symbols');
+        const data = await response.json();
+        
+        if (data.success) {
+            const symbols = data.symbols || [];
+            const defaultSymbols = data.default_symbols || [];
+            
+            // Update the input field
+            const symbolsInput = document.getElementById('custom-symbols-input');
+            if (symbolsInput) {
+                symbolsInput.value = symbols.join(', ');
+            }
+            
+            // Update the display
+            displayActiveSymbols(symbols, defaultSymbols);
+            updateSymbolsCount();
+        }
+    } catch (error) {
+        console.error('Error loading current symbols:', error);
+        showSymbolsStatus('Error loading current symbols', 'error');
+    }
+}
+
+function displayActiveSymbols(symbols, defaultSymbols = []) {
+    const container = document.getElementById('active-symbols-display');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (symbols.length === 0) {
+        container.innerHTML = '<span class="help-text">No symbols configured</span>';
+        return;
+    }
+    
+    symbols.forEach(symbol => {
+        const tag = document.createElement('span');
+        tag.className = `symbol-tag ${defaultSymbols.includes(symbol) ? 'default' : ''}`;
+        tag.textContent = symbol;
+        tag.title = defaultSymbols.includes(symbol) ? 'Default symbol' : 'Custom symbol';
+        container.appendChild(tag);
+    });
+}
+
+function updateSymbolsCount() {
+    const symbolsInput = document.getElementById('custom-symbols-input');
+    const countElement = document.getElementById('symbols-count');
+    
+    if (!symbolsInput || !countElement) return;
+    
+    const symbols = parseSymbolsInput(symbolsInput.value);
+    countElement.textContent = symbols.length;
+}
+
+function parseSymbolsInput(input) {
+    if (!input || typeof input !== 'string') return [];
+    
+    return input
+        .split(',')
+        .map(s => s.trim().toUpperCase())
+        .filter(s => s.length > 0 && /^[A-Z]{1,10}$/.test(s));
+}
+
+async function applyCustomSymbols() {
+    const symbolsInput = document.getElementById('custom-symbols-input');
+    if (!symbolsInput) return;
+    
+    const inputValue = symbolsInput.value.trim();
+    if (!inputValue) {
+        showSymbolsStatus('Please enter at least one symbol', 'error');
+        return;
+    }
+    
+    const symbols = parseSymbolsInput(inputValue);
+    
+    if (symbols.length === 0) {
+        showSymbolsStatus('No valid symbols found. Please use format: AAPL, MSFT, GOOGL', 'error');
+        return;
+    }
+    
+    if (symbols.length > 50) {
+        showSymbolsStatus('Too many symbols. Please limit to 50 symbols maximum', 'error');
+        return;
+    }
+    
+    try {
+        // Show loading state
+        setSymbolsLoading(true);
+        showSymbolsStatus('Applying custom symbols...', 'info');
+        
+        const response = await fetch('/api/symbols', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                symbols: symbols
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSymbolsStatus(`Successfully applied ${data.symbols.length} custom symbols`, 'success');
+            displayActiveSymbols(data.symbols, []);
+            
+            // Refresh the screening data after a short delay
+            setTimeout(() => {
+                refreshScan();
+            }, 1000);
+        } else {
+            showSymbolsStatus(data.error || 'Failed to apply custom symbols', 'error');
+        }
+    } catch (error) {
+        console.error('Error applying custom symbols:', error);
+        showSymbolsStatus('Network error while applying symbols', 'error');
+    } finally {
+        setSymbolsLoading(false);
+    }
+}
+
+async function loadDefaultSymbols() {
+    try {
+        setSymbolsLoading(true);
+        showSymbolsStatus('Loading default symbols...', 'info');
+        
+        const response = await fetch('/api/symbols');
+        const data = await response.json();
+        
+        if (data.success && data.default_symbols) {
+            const symbolsInput = document.getElementById('custom-symbols-input');
+            if (symbolsInput) {
+                symbolsInput.value = data.default_symbols.join(', ');
+                updateSymbolsCount();
+            }
+            
+            // Apply the default symbols
+            await applyCustomSymbols();
+        } else {
+            showSymbolsStatus('Failed to load default symbols', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading default symbols:', error);
+        showSymbolsStatus('Network error while loading default symbols', 'error');
+    } finally {
+        setSymbolsLoading(false);
+    }
+}
+
+function showSymbolsStatus(message, type = 'info') {
+    const statusElement = document.getElementById('symbols-status');
+    if (!statusElement) return;
+    
+    statusElement.className = `symbols-status ${type}`;
+    statusElement.textContent = message;
+    
+    // Auto-hide success and info messages after 5 seconds
+    if (type === 'success' || type === 'info') {
+        setTimeout(() => {
+            statusElement.style.display = 'none';
+        }, 5000);
+    }
+}
+
+function setSymbolsLoading(isLoading) {
+    const container = document.querySelector('.symbols-input-section');
+    const buttons = container?.querySelectorAll('button');
+    
+    if (isLoading) {
+        container?.classList.add('symbols-loading');
+        buttons?.forEach(btn => btn.disabled = true);
+    } else {
+        container?.classList.remove('symbols-loading');
+        buttons?.forEach(btn => btn.disabled = false);
     }
 }
 
